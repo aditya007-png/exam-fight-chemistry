@@ -1,6 +1,11 @@
-import React from 'react';
+// src/pages/student/StudentDashboard.tsx
+// Real Student Dashboard with dynamic real exam data and attempts calculation
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { getStoredExams, getAttemptsForStudent } from '../../lib/examService';
+import { ExamItem } from '../../types/dashboard';
+import { ExamAttempt } from '../../types/evidence';
 import { DashboardCard } from '../../components/common/DashboardCard';
 import { Button } from '../../components/common/Button';
 import {
@@ -14,37 +19,25 @@ import {
 
 export const StudentDashboard: React.FC = () => {
   const { user } = useAuth();
+  const [exams, setExams] = useState<ExamItem[]>([]);
+  const [attempts, setAttempts] = useState<ExamAttempt[]>([]);
 
-  const assignedExams = [
-    {
-      id: 'exam-act-001',
-      title: 'Organic Chemistry — Unit Test',
-      courseCode: 'CHEM-302',
-      duration: '60 Minutes',
-      status: 'Live Now',
-      isLive: true,
-    },
-    {
-      id: 'exam-act-002',
-      title: 'Inorganic Chemistry — Mid Term',
-      courseCode: 'CHEM-301',
-      duration: '90 Minutes',
-      status: 'Tomorrow, 10:00 AM',
-      isLive: false,
-    },
-  ];
+  useEffect(() => {
+    const loadedExams = getStoredExams();
+    setExams(loadedExams);
+    if (user?.email) {
+      setAttempts(getAttemptsForStudent(user.email));
+    }
+  }, [user?.email]);
 
-  const recentSubmissions = [
-    {
-      id: 'res-001',
-      title: 'Spectroscopy & Molecular Identification',
-      courseCode: 'CHEM-405',
-      score: '92/100',
-      grade: 'A+',
-      status: 'Verified',
-      date: '15 Feb 2026',
-    },
-  ];
+  const completedAttempts = attempts.filter((a) => a.status === 'submitted');
+  const avgIntegrity =
+    completedAttempts.length > 0
+      ? Math.round(
+          completedAttempts.reduce((sum, a) => sum + (a.integrityScore || 100), 0) /
+            completedAttempts.length
+        )
+      : 100;
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto py-2">
@@ -55,10 +48,12 @@ export const StudentDashboard: React.FC = () => {
             Student Portal
           </span>
           <h1 className="text-2xl font-extrabold text-slate-900 mt-1">
-            Welcome back, {user?.full_name || 'Alex'} 👋
+            Welcome back, {user?.full_name || 'Student'} 👋
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            You have 1 active live examination ready for verification and entry.
+            {exams.length > 0
+              ? `You have ${exams.length} active chemistry examination(s) available.`
+              : 'No examinations are scheduled right now.'}
           </p>
         </div>
 
@@ -69,25 +64,25 @@ export const StudentDashboard: React.FC = () => {
         </Link>
       </div>
 
-      {/* 2. Stat Cards */}
+      {/* 2. Real Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <DashboardCard
           title="Assigned Exams"
-          value="02"
-          subtitle="1 live now, 1 scheduled"
+          value={exams.length.toString().padStart(2, '0')}
+          subtitle={`${exams.filter((e) => e.status === 'active').length} live now`}
           icon={FileText}
           accentColor="blue"
         />
         <DashboardCard
           title="Completed Exams"
-          value="04"
-          subtitle="All passed with verified status"
+          value={completedAttempts.length.toString().padStart(2, '0')}
+          subtitle="Graded & recorded attempts"
           icon={Award}
           accentColor="emerald"
         />
         <DashboardCard
           title="Integrity Record"
-          value="96%"
+          value={`${avgIntegrity}%`}
           subtitle="Average compliance score"
           icon={ShieldCheck}
           accentColor="indigo"
@@ -105,47 +100,47 @@ export const StudentDashboard: React.FC = () => {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {assignedExams.map((exam) => (
-            <div
-              key={exam.id}
-              className="p-5 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between space-y-3"
-            >
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-bold text-blue-700 bg-white px-2 py-0.5 rounded border border-slate-200">
-                    {exam.courseCode}
-                  </span>
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      exam.isLive
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                        : 'bg-slate-200 text-slate-700'
-                    }`}
-                  >
-                    {exam.status}
+        {exams.length === 0 ? (
+          <div className="p-8 text-center bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+            <p className="text-xs text-slate-500">No examinations assigned at this moment.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {exams.map((exam) => (
+              <div
+                key={exam.id}
+                className="p-5 rounded-xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between space-y-3"
+              >
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono font-bold text-blue-700 bg-white px-2 py-0.5 rounded border border-slate-200">
+                      {exam.courseCode}
+                    </span>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        exam.status === 'active'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : 'bg-slate-200 text-slate-700'
+                      }`}
+                    >
+                      {exam.status === 'active' ? '🟢 Live Now' : 'Scheduled'}
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-bold text-slate-900">{exam.title}</h3>
+                  <span className="text-xs text-slate-500 flex items-center gap-1 font-mono">
+                    <Clock className="w-3.5 h-3.5" /> Duration: {exam.durationMinutes} min
                   </span>
                 </div>
-                <h3 className="text-sm font-bold text-slate-900">{exam.title}</h3>
-                <span className="text-xs text-slate-500 flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5" /> Duration: {exam.duration}
-                </span>
-              </div>
 
-              {exam.isLive ? (
                 <Link to={`/student/exam/${exam.id}`}>
                   <Button variant="primary" size="sm" className="w-full text-xs font-bold">
                     Start Examination
                   </Button>
                 </Link>
-              ) : (
-                <Button variant="secondary" size="sm" className="w-full text-xs" disabled>
-                  Locked
-                </Button>
-              )}
-            </div>
-          ))}
-        </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 4. Quick Tools Section (Periodic Table) */}
@@ -158,7 +153,6 @@ export const StudentDashboard: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {/* Periodic Table Card */}
           <Link
             to="/student/periodic-table"
             className="p-5 rounded-2xl bg-gradient-to-br from-blue-50/80 to-indigo-50/50 border border-blue-200 hover:border-blue-300 hover:shadow-md transition-all group flex flex-col justify-between"
@@ -182,34 +176,40 @@ export const StudentDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* 5. Completed Exams */}
-      <div className="rounded-2xl bg-white border border-slate-200 p-6 shadow-card space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-bold text-slate-900">
-            Completed Examinations
-          </h2>
-          <Link to="/student/results" className="text-xs font-bold text-blue-600 hover:text-blue-700">
-            View All Results →
-          </Link>
-        </div>
+      {/* 5. Completed Exams & Results */}
+      {completedAttempts.length > 0 && (
+        <div className="rounded-2xl bg-white border border-slate-200 p-6 shadow-card space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-bold text-slate-900">
+              Completed Examinations
+            </h2>
+            <Link to="/student/results" className="text-xs font-bold text-blue-600 hover:text-blue-700">
+              View All Results →
+            </Link>
+          </div>
 
-        <div className="divide-y divide-slate-100">
-          {recentSubmissions.map((sub) => (
-            <div key={sub.id} className="py-3.5 flex items-center justify-between text-xs">
-              <div>
-                <span className="font-bold text-slate-900 block">{sub.title}</span>
-                <span className="text-slate-400 font-mono">{sub.courseCode} • {sub.date}</span>
+          <div className="divide-y divide-slate-100">
+            {completedAttempts.map((sub) => (
+              <div key={sub.id} className="py-3.5 flex items-center justify-between text-xs">
+                <div>
+                  <span className="font-bold text-slate-900 block">{sub.examTitle}</span>
+                  <span className="text-slate-400 font-mono">
+                    {sub.courseCode} • {new Date(sub.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="font-mono font-bold text-slate-900 text-sm">
+                    {sub.score || 0}/{sub.totalMarks || 100}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold text-[10px] border border-emerald-200">
+                    Verified ({sub.integrityScore}%)
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center gap-4">
-                <span className="font-mono font-bold text-slate-900 text-sm">{sub.score}</span>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold text-[10px] border border-emerald-200">
-                  {sub.status}
-                </span>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

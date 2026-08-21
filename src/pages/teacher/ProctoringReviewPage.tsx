@@ -3,7 +3,6 @@ import { useSearchParams, Link } from 'react-router-dom';
 import {
   getExamAttemptsList,
   getStudentAttemptEvidence,
-  MOCK_ATTEMPTS,
   grantExamRestart,
 } from '../../lib/evidenceService';
 import {
@@ -271,10 +270,31 @@ export const ProctoringReviewPage: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const activeAttempt =
+  const activeAttempt: ExamAttempt =
     evidenceSummary?.attempt ||
-    MOCK_ATTEMPTS[selectedAttemptId] ||
-    MOCK_ATTEMPTS['att-rahul'];
+    filteredStudents.find((a: ExamAttempt) => a.id === selectedAttemptId) ||
+    filteredStudents[0] || {
+      id: 'none',
+      examId: selectedExamId,
+      examTitle: currentExamMeta.title,
+      courseCode: currentExamMeta.code,
+      className: currentExamMeta.className,
+      studentId: 'none',
+      studentName: 'No Candidate Selected',
+      studentEmail: 'none@chem.edu',
+      status: 'submitted',
+      roomScanCompleted: false,
+      startedAt: new Date().toISOString(),
+      submittedAt: null,
+      score: 0,
+      totalMarks: 100,
+      integrityScore: 100,
+      riskLevel: 'LOW',
+      totalViolations: 0,
+      evidenceCount: 0,
+      durationMinutes: 60,
+      createdAt: new Date().toISOString(),
+    };
 
   const isStudentLiveNow = activeAttempt.status === 'in_progress';
 

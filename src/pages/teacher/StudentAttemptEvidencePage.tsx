@@ -39,37 +39,6 @@ export const StudentAttemptEvidencePage: React.FC = () => {
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [auditStatus, setAuditStatus] = useState<'pending' | 'verified' | 'flagged'>('pending');
 
-  const mockPeriodicSnapshots = [
-    {
-      id: 'snap-1',
-      time: '18:15:22',
-      status: 'Normal',
-      description: 'Candidate looking directly at screen',
-      img: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=60',
-    },
-    {
-      id: 'snap-2',
-      time: '18:22:45',
-      status: 'Normal',
-      description: 'Solving chemical thermodynamics calculation',
-      img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=60',
-    },
-    {
-      id: 'snap-3',
-      time: '18:35:10',
-      status: 'Notice',
-      description: 'Gaze diverted towards desk side for 8 seconds',
-      img: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=60',
-    },
-    {
-      id: 'snap-4',
-      time: '18:48:30',
-      status: 'Normal',
-      description: 'Reviewing question palette submissions',
-      img: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=400&auto=format&fit=crop&q=60',
-    },
-  ];
-
   useEffect(() => {
     getStudentAttemptEvidence(activeAttemptId).then((data) => {
       setEvidenceData(data);
@@ -253,7 +222,7 @@ export const StudentAttemptEvidencePage: React.FC = () => {
           }`}
         >
           <Camera className="w-4 h-4" />
-          <span>In-Exam Photo Snapshots ({mockPeriodicSnapshots.length})</span>
+          <span>In-Exam Photo Snapshots ({(evidenceData?.snapshots || []).length})</span>
         </button>
 
         <button
@@ -386,43 +355,49 @@ export const StudentAttemptEvidencePage: React.FC = () => {
               <p className="text-xs text-slate-500">Captured automatically during examination session</p>
             </div>
             <span className="text-xs font-mono font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200">
-              {mockPeriodicSnapshots.length} Snapshots Saved
+              {(evidenceData?.snapshots || []).length} Snapshots Saved
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {mockPeriodicSnapshots.map((snap) => (
-              <div
-                key={snap.id}
-                className="rounded-2xl bg-white border border-slate-200 overflow-hidden shadow-card hover:border-slate-300 transition-all space-y-2.5 p-3"
-              >
-                <div className="relative aspect-video rounded-xl bg-slate-100 overflow-hidden">
-                  <img
-                    src={snap.img}
-                    alt="Webcam snapshot"
-                    className="w-full h-full object-cover"
-                  />
-                  <span className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-slate-900/80 backdrop-blur text-white text-[10px] font-mono font-bold">
-                    {snap.time}
-                  </span>
-                </div>
-
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-900">Status Check</span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      snap.status === 'Normal' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
-                    }`}>
-                      {snap.status}
+          {(evidenceData?.snapshots || []).length === 0 ? (
+            <div className="p-8 text-center bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500">
+              No periodic webcam snapshot flags triggered during this examination session.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {(evidenceData?.snapshots || []).map((snap) => (
+                <div
+                  key={snap.id}
+                  className="rounded-2xl bg-white border border-slate-200 overflow-hidden shadow-card hover:border-slate-300 transition-all space-y-2.5 p-3"
+                >
+                  <div className="relative aspect-video rounded-xl bg-slate-100 overflow-hidden">
+                    <img
+                      src={snap.img}
+                      alt="Webcam snapshot"
+                      className="w-full h-full object-cover"
+                    />
+                    <span className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-slate-900/80 backdrop-blur text-white text-[10px] font-mono font-bold">
+                      {snap.timestamp}
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500 leading-snug">
-                    {snap.description}
-                  </p>
+
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-900">Status Check</span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        snap.severity === 'normal' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+                      }`}>
+                        {snap.evidenceType}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-snug">
+                      {snap.triggerEvent}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

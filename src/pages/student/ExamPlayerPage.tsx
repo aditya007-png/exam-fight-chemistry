@@ -12,6 +12,13 @@ import { RoomScanExperience } from '../../components/exam/RoomScanExperience';
 import { Button } from '../../components/common/Button';
 import { MOCK_EXAM_QUESTIONS, MOCK_SAVED_SUBMISSIONS } from '../../lib/mockExamData';
 import {
+  getExamById,
+  getExamQuestions,
+  createOrUpdateAttempt,
+  saveAttemptEvidence,
+} from '../../lib/examService';
+import { ExamAttempt } from '../../types/evidence';
+import {
   uploadRoomScanVideo,
   requestExamRestart,
   checkExamRestartStatus,
@@ -45,8 +52,13 @@ export const ExamPlayerPage: React.FC = () => {
   const { user } = useAuth();
 
   const activeExamId = examId || 'exam-act-001';
+  const storedExam = getExamById(activeExamId);
+  const storedQuestions = getExamQuestions(activeExamId);
+
   const questions: ExamQuestion[] =
-    MOCK_EXAM_QUESTIONS[activeExamId] || MOCK_EXAM_QUESTIONS['exam-act-001'];
+    storedQuestions.length > 0
+      ? (storedQuestions as any)
+      : MOCK_EXAM_QUESTIONS[activeExamId] || MOCK_EXAM_QUESTIONS['exam-act-001'];
 
   // Current Step in Student Flow
   const [currentStep, setCurrentStep] = useState<ExamStep>('instructions');
@@ -170,8 +182,8 @@ export const ExamPlayerPage: React.FC = () => {
     if (currentStep !== 'terminated_tab_switch' && currentStep !== 'terminated_proctoring') return;
     if (!terminationInfo?.attemptId) return;
 
-    const interval = setInterval(() => {
-      const statusObj = checkExamRestartStatus(terminationInfo.attemptId);
+    const interval = setInterval(async () => {
+      const statusObj = await checkExamRestartStatus(terminationInfo.attemptId);
       if (statusObj && statusObj.status === 'granted') {
         setRestartStatus('granted');
       }
@@ -187,10 +199,12 @@ export const ExamPlayerPage: React.FC = () => {
 
     await requestExamRestart({
       attemptId: terminationInfo.attemptId,
-      studentId: user?.id || 'demo-student-001',
-      studentName: user?.full_name || 'Alex Chen',
+      studentId: user?.id || 'stu-001',
+      studentName: user?.full_name || 'Candidate',
+      studentEmail: user?.email || 'student@chem.edu',
       examId: activeExamId,
-      reason: terminationInfo.reason || 'Tab Switch Violation',
+      examTitle: storedExam?.title || 'Chemistry Examination',
+      violationReason: terminationInfo.reason || 'Tab Switch Violation',
       studentNote: studentNote.trim() || undefined,
     });
 
@@ -275,13 +289,17 @@ export const ExamPlayerPage: React.FC = () => {
     const percentage = Math.round((finalScore / maxScore) * 100);
 
     const submissionId = `sub-${Date.now()}`;
+    const attemptId = `att-${user?.id || 'stu'}-${Date.now().toString().slice(-4)}`;
+    const examTitle = storedExam?.title || 'Chemistry Examination';
+    const courseCode = storedExam?.courseCode || 'CHEM-302';
+
     const resultObj = {
       id: submissionId,
       examId: activeExamId,
-      examTitle: 'Organic Chemistry — Unit Test',
-      courseCode: 'CHEM-302',
-      studentId: user?.id || 'demo-student-001',
-      studentName: user?.full_name || 'Alex Chen',
+      examTitle,
+      courseCode,
+      studentId: user?.id || 'stu-001',
+      studentName: user?.full_name || 'Candidate',
       score: finalScore,
       totalMarks: maxScore,
       percentage,
@@ -300,6 +318,81 @@ export const ExamPlayerPage: React.FC = () => {
       ],
       questionResults: [],
     };
+
+    // Save Real Exam Attempt
+    const realAttempt: ExamAttempt = {
+      id: attemptId,
+      examId: activeExamId,
+      examTitle,
+      courseCode,
+      className: '12-A',
+      studentId: user?.id || 'stu-001',
+      studentName: user?.full_name || 'Candidate',
+      studentEmail: user?.email || 'student@chem.edu',
+      status: 'submitted',
+      roomScanCompleted: true,
+      startedAt: new Date(Date.now() - (3600 - remainingSeconds) * 1000).toISOString(),
+      submittedAt: new Date().toISOString(),
+      score: finalScore,
+      totalMarks: maxScore,
+      integrityScore: Math.max(40, 100 - proctoring.proctoringState.strikeCount * 20),
+      riskLevel: proctoring.proctoringState.strikeCount > 1 ? 'HIGH' : proctoring.proctoringState.strikeCount === 1 ? 'MEDIUM' : 'LOW',
+      totalViolations: proctoring.events.length,
+      evidenceCount: proctoring.events.length + 1,
+      durationMinutes: Math.max(1, Math.ceil((3600 - remainingSeconds) / 60)),
+      createdAt: new Date().toISOString(),
+    };
+
+    createOrUpdateAttempt(realAttempt);
+
+    saveAttemptEvidence(attemptId, {
+      id: `evi-${attemptId}`,
+      attemptId,
+      examId: activeExamId,
+      studentId: user?.id || 'stu-001',
+      evidenceType: 'full_session_evidence' as any,
+      filePath: '',
+      fileSize: 0,
+      durationSeconds: 3600 - remainingSeconds,
+      signedUrl: '',
+      metadata: {
+        attempt: realAttempt,
+        evidenceList: [],
+        roomScanVideo: null,
+        webcamVideo: null,
+        snapshots: [],
+        integrityEvents: proctoring.events.map((ev, idx) => ({
+          id: `ev-${idx}-${Date.now()}`,
+          timestamp: new Date(ev.timestamp).toLocaleTimeString(),
+          relativeTime: ev.relativeTimeFormatted || '00:00',
+          eventType: ev.eventType as any,
+          title: ev.description,
+          description: ev.description,
+          severity: ev.severity,
+          durationSeconds: 1,
+          hasEvidence: false,
+        })),
+        activityLogs: [
+          {
+            id: `act-1`,
+            timestamp: new Date().toLocaleTimeString(),
+            action: 'Room Scan',
+            detail: '360° rotational scan verified',
+            category: 'proctoring',
+          },
+          {
+            id: `act-2`,
+            timestamp: new Date().toLocaleTimeString(),
+            action: 'Exam Submitted',
+            detail: `Score: ${finalScore}/${maxScore}`,
+            category: 'auth',
+          },
+        ],
+        proctoringFlagsCount: proctoring.events.length,
+      },
+      recordedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+    } as any);
 
     MOCK_SAVED_SUBMISSIONS[submissionId] = resultObj;
     setSubmissionResult(resultObj);

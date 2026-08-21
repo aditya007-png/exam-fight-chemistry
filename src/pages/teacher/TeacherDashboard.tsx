@@ -1,6 +1,11 @@
-import React from 'react';
+// src/pages/teacher/TeacherDashboard.tsx
+// Real Teacher Dashboard with dynamic calculation of exams, attempts, and proctoring evidence alerts
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { getStoredExams, getAllStoredAttempts } from '../../lib/examService';
+import { ExamItem } from '../../types/dashboard';
+import { ExamAttempt } from '../../types/evidence';
 import { DashboardCard } from '../../components/common/DashboardCard';
 import { Button } from '../../components/common/Button';
 import {
@@ -15,66 +20,17 @@ import {
 
 export const TeacherDashboard: React.FC = () => {
   const { user } = useAuth();
+  const [exams, setExams] = useState<ExamItem[]>([]);
+  const [attempts, setAttempts] = useState<ExamAttempt[]>([]);
 
-  const exams = [
-    {
-      id: 'exam-act-001',
-      name: 'Organic Chemistry — Unit Test',
-      class: '12-A',
-      studentsCount: 42,
-      duration: '60 min',
-      status: 'live',
-      date: 'Today',
-    },
-    {
-      id: 'exam-act-002',
-      name: 'Inorganic Chemistry — Mid Term',
-      class: '12-B',
-      studentsCount: 38,
-      duration: '90 min',
-      status: 'scheduled',
-      date: 'Tomorrow',
-    },
-    {
-      id: 'exam-act-003',
-      name: 'Physical Chemistry — Quiz 3',
-      class: '11-A',
-      studentsCount: 45,
-      duration: '45 min',
-      status: 'scheduled',
-      date: '25 Aug',
-    },
-  ];
+  useEffect(() => {
+    setExams(getStoredExams());
+    setAttempts(getAllStoredAttempts());
+  }, []);
 
-  const evidenceAlerts = [
-    {
-      id: 'att-arjun',
-      studentName: 'Arjun Mehta',
-      examName: 'Physical Chemistry — Quiz 3',
-      issue: 'Camera disconnected for 18 seconds',
-      status: 'Review Required',
-      risk: 'high',
-      time: '08:58 AM',
-    },
-    {
-      id: 'att-rahul',
-      studentName: 'Rahul Sharma',
-      examName: 'Organic Chemistry — Unit Test',
-      issue: 'Tab switch detected (3 seconds)',
-      status: 'Review',
-      risk: 'medium',
-      time: '10:44 AM',
-    },
-    {
-      id: 'att-priya',
-      studentName: 'Priya Patel',
-      examName: 'Inorganic Chemistry — Mid Term',
-      issue: '360° Room Scan verified clean',
-      status: 'Verified',
-      risk: 'low',
-      time: '09:15 AM',
-    },
-  ];
+  const activeExamsCount = exams.filter((e) => e.status === 'active').length;
+  const completedAttempts = attempts.filter((a) => a.status === 'submitted');
+  const flaggedAttempts = attempts.filter((a) => a.totalViolations > 0 || a.riskLevel === 'HIGH');
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto py-2">
@@ -82,10 +38,10 @@ export const TeacherDashboard: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-            Good Morning, {user?.full_name?.split(' ')[0] || 'Aditya'}! 👋
+            Welcome, {user?.full_name?.split(' ')[0] || 'Professor'}! 👋
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Overview of your active examinations, candidate attempts, and proctoring evidence.
+            Overview of your active chemistry examinations, candidate attempts, and proctoring evidence.
           </p>
         </div>
 
@@ -98,39 +54,39 @@ export const TeacherDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. 4 Simplified Stat Cards */}
+      {/* 2. Real Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <DashboardCard
           title="Total Exams"
-          value="06"
-          subtitle="All terms"
+          value={exams.length.toString().padStart(2, '0')}
+          subtitle="All created exams"
           icon={FileText}
           accentColor="blue"
         />
         <DashboardCard
           title="Active Exams"
-          value="02"
-          subtitle="In progress"
+          value={activeExamsCount.toString().padStart(2, '0')}
+          subtitle="Currently published"
           icon={Radio}
           accentColor="emerald"
         />
         <DashboardCard
-          title="Completed Exams"
-          value="32"
-          subtitle="Graded & recorded"
+          title="Completed Attempts"
+          value={completedAttempts.length.toString().padStart(2, '0')}
+          subtitle="Submitted candidate tests"
           icon={CheckCircle2}
           accentColor="indigo"
         />
         <DashboardCard
-          title="Evidence Requiring Review"
-          value="03"
-          subtitle="Flagged attempts"
+          title="Evidence Alerts"
+          value={flaggedAttempts.length.toString().padStart(2, '0')}
+          subtitle="Flagged proctoring events"
           icon={AlertTriangle}
           accentColor="amber"
         />
       </div>
 
-      {/* 3. Examinations List */}
+      {/* 3. Real Examinations List */}
       <div className="rounded-2xl bg-white border border-slate-200 shadow-card p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-bold text-slate-900">
@@ -141,48 +97,59 @@ export const TeacherDashboard: React.FC = () => {
           </Link>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-slate-100 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">
-                <th className="pb-3">Exam Name</th>
-                <th className="pb-3">Class</th>
-                <th className="pb-3">Students</th>
-                <th className="pb-3">Duration</th>
-                <th className="pb-3">Status</th>
-                <th className="pb-3 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
-              {exams.map((ex) => (
-                <tr key={ex.id} className="hover:bg-slate-50">
-                  <td className="py-3.5 font-bold text-slate-900">{ex.name}</td>
-                  <td className="py-3.5 text-slate-600">{ex.class}</td>
-                  <td className="py-3.5 text-slate-600 font-mono">{ex.studentsCount}</td>
-                  <td className="py-3.5 text-slate-600 font-mono">{ex.duration}</td>
-                  <td className="py-3.5">
-                    <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        ex.status === 'live'
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          : 'bg-blue-50 text-blue-700 border border-blue-200'
-                      }`}
-                    >
-                      {ex.status === 'live' ? '🟢 Live' : 'Scheduled'}
-                    </span>
-                  </td>
-                  <td className="py-3.5 text-right">
-                    <Link to={`/teacher/evidence-review?exam=${ex.id}`}>
-                      <Button variant="secondary" size="sm" className="text-xs py-1 px-2.5">
-                        Evidence
-                      </Button>
-                    </Link>
-                  </td>
+        {exams.length === 0 ? (
+          <div className="p-8 text-center bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+            <p className="text-xs text-slate-500">No examinations created yet.</p>
+            <Link to="/teacher/create-exam" className="inline-block pt-1">
+              <Button variant="primary" size="sm" leftIcon={<Plus className="w-4 h-4" />}>
+                Create Your First Exam
+              </Button>
+            </Link>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-slate-100 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">
+                  <th className="pb-3">Exam Name</th>
+                  <th className="pb-3">Course Code</th>
+                  <th className="pb-3">Questions</th>
+                  <th className="pb-3">Duration</th>
+                  <th className="pb-3">Status</th>
+                  <th className="pb-3 text-right">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-slate-700">
+                {exams.map((ex) => (
+                  <tr key={ex.id} className="hover:bg-slate-50">
+                    <td className="py-3.5 font-bold text-slate-900">{ex.title}</td>
+                    <td className="py-3.5 text-blue-700 font-mono font-bold">{ex.courseCode}</td>
+                    <td className="py-3.5 text-slate-600 font-mono">{ex.totalQuestions}</td>
+                    <td className="py-3.5 text-slate-600 font-mono">{ex.durationMinutes} min</td>
+                    <td className="py-3.5">
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          ex.status === 'active'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : 'bg-blue-50 text-blue-700 border border-blue-200'
+                        }`}
+                      >
+                        {ex.status === 'active' ? '🟢 Active' : 'Scheduled'}
+                      </span>
+                    </td>
+                    <td className="py-3.5 text-right">
+                      <Link to={`/teacher/evidence-review?exam=${ex.id}`}>
+                        <Button variant="secondary" size="sm" className="text-xs py-1 px-2.5">
+                          Evidence
+                        </Button>
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* 4. Evidence Requiring Review */}
@@ -190,10 +157,10 @@ export const TeacherDashboard: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-base font-bold text-slate-900">
-              Evidence Requiring Review
+              Evidence & Candidate Attempts
             </h2>
             <p className="text-xs text-slate-500">
-              Recent proctoring events and candidate environmental flags
+              Recent proctoring events, room scan verifications, and compliance logs
             </p>
           </div>
           <Link
@@ -205,94 +172,56 @@ export const TeacherDashboard: React.FC = () => {
           </Link>
         </div>
 
-        <div className="divide-y divide-slate-100">
-          {evidenceAlerts.map((alt) => (
-            <div
-              key={alt.id}
-              className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
-            >
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-slate-900">{alt.studentName}</span>
-                  <span className="text-[11px] text-slate-500">• {alt.examName}</span>
+        {attempts.length === 0 ? (
+          <div className="p-8 text-center bg-slate-50 rounded-xl border border-slate-200">
+            <p className="text-xs text-slate-500">No student attempts recorded yet.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {attempts.slice(0, 5).map((att) => (
+              <div
+                key={att.id}
+                className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+              >
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-900">{att.studentName}</span>
+                    <span className="text-[11px] text-slate-500">• {att.examTitle}</span>
+                  </div>
+                  <p className="text-slate-600">
+                    Integrity Score: <strong>{att.integrityScore}%</strong> • Total Violations:{' '}
+                    <strong>{att.totalViolations}</strong>
+                  </p>
                 </div>
-                <p className="text-slate-600">{alt.issue}</p>
+
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                      att.riskLevel === 'HIGH'
+                        ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                        : att.riskLevel === 'MEDIUM'
+                        ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                        : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    }`}
+                  >
+                    {att.status === 'submitted' ? 'Submitted' : 'In Progress'}
+                  </span>
+
+                  <Link to={`/teacher/evidence-review?attempt=${att.id}`}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="text-xs py-1 px-2.5"
+                      leftIcon={<Eye className="w-3 h-3 text-blue-600" />}
+                    >
+                      Review
+                    </Button>
+                  </Link>
+                </div>
               </div>
-
-              <div className="flex items-center gap-3">
-                <span
-                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                    alt.risk === 'high'
-                      ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                      : alt.risk === 'medium'
-                      ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                      : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                  }`}
-                >
-                  {alt.status}
-                </span>
-
-                <Link to={`/teacher/evidence-review?attempt=${alt.id}`}>
-                  <Button variant="secondary" size="sm" className="text-xs py-1 px-2.5" leftIcon={<Eye className="w-3 h-3 text-blue-600" />}>
-                    Review
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* 5. Student Requests & Restart Inquiries Card */}
-      <div className="rounded-2xl bg-white border border-amber-200 shadow-card p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-xs">
-              2
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-slate-900">
-                Pending Student Restart Requests
-              </h2>
-              <p className="text-xs text-slate-500">
-                Candidates requesting approval to retake locked or tab-switched examinations
-              </p>
-            </div>
+            ))}
           </div>
-          <Link
-            to="/teacher/requests"
-            className="text-xs font-bold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1"
-          >
-            <span>Open Requests Hub</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-          <div className="p-3.5 rounded-xl bg-amber-50/60 border border-amber-200 flex items-center justify-between">
-            <div>
-              <strong className="text-slate-900 block">Arjun Mehta (Class 12-A)</strong>
-              <span className="text-[11px] text-amber-900">Tab Switch Appeal • Organic Chemistry</span>
-            </div>
-            <Link to="/teacher/requests">
-              <Button variant="primary" size="sm" className="text-[11px] bg-amber-600 hover:bg-amber-700 text-white font-bold py-1">
-                Review & Grant
-              </Button>
-            </Link>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-amber-50/60 border border-amber-200 flex items-center justify-between">
-            <div>
-              <strong className="text-slate-900 block">Sneha Reddy (Class 12-B)</strong>
-              <span className="text-[11px] text-amber-900">Face Timeout Appeal • Inorganic Chem</span>
-            </div>
-            <Link to="/teacher/requests">
-              <Button variant="primary" size="sm" className="text-[11px] bg-amber-600 hover:bg-amber-700 text-white font-bold py-1">
-                Review & Grant
-              </Button>
-            </Link>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -15,6 +15,7 @@ import { AiReviewScreen } from '../../components/teacher/AiReviewScreen';
 import { QuestionArrangeList } from '../../components/teacher/QuestionArrangeList';
 import { extractMcqsFromPdf } from '../../lib/pdfParser';
 import { generateAiQuestions, AiGenerateParams } from '../../lib/aiQuestionService';
+import { createOrUpdateExam } from '../../lib/examService';
 import { ChemQuestion, ChemTopic, QuestionDifficulty } from '../../types/question';
 import {
   CheckCircle2, Clock, PenLine, Upload, Sparkles, ChevronRight,
@@ -126,6 +127,19 @@ export const ExamBuilderPage: React.FC = () => {
 
   // ── Publish ───────────────────────────────────────────────────────────────
   const handlePublish = () => {
+    createOrUpdateExam(
+      {
+        title: examName,
+        courseCode,
+        durationMinutes,
+        className,
+        topic: subject,
+        teacherName: 'Faculty Instructor',
+        status: 'active',
+      },
+      questions
+    );
+
     alert(`✅ Examination "${examName}" published with ${questions.length} questions (${questions.reduce((s, q) => s + q.marks, 0)} total marks).`);
     navigate('/teacher/exams');
   };

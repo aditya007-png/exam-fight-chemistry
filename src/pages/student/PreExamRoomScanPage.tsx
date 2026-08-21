@@ -211,6 +211,7 @@ export const PreExamRoomScanPage: React.FC = () => {
       studentName: user?.full_name || 'Alex Chen',
       videoBlob: blob,
       durationSeconds: Math.max(8, durationSecs),
+      coverageDegrees: 360,
     });
 
     clearInterval(progInterval);
