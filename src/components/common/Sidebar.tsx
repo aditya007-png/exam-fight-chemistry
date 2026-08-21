@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { ContactSupportModal } from './ContactSupportModal';
 import {
   LayoutDashboard,
   FileText,
@@ -15,6 +16,7 @@ import {
   GraduationCap,
   Inbox,
   Atom,
+  LifeBuoy,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -25,8 +27,9 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const { role } = useAuth();
   const location = useLocation();
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
 
-  // Strict, purposeful navigation items per role
+  // Strict navigation items per role
   const getNavItems = () => {
     if (role === 'teacher') {
       return [
@@ -45,6 +48,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         { label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
         { label: 'Users', path: '/admin/users', icon: Users },
         { label: 'Teachers', path: '/admin/teachers', icon: GraduationCap },
+        { label: 'Complaints', path: '/admin/complaints', icon: LifeBuoy },
         { label: 'Settings', path: '/admin/settings', icon: Settings },
       ];
     }
@@ -130,17 +134,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               <h5 className="text-xs font-bold text-slate-900">Need Help?</h5>
             </div>
             <p className="text-[11px] text-slate-500 leading-relaxed mb-3">
-              We&apos;re here to help you 24/7 with examination setup.
+              File a complaint or technical issue with administration.
             </p>
             <button
-              onClick={() => alert('Connected to 24/7 Examination Support Desk.')}
-              className="w-full py-1.5 px-3 rounded-xl bg-white border border-slate-200 hover:border-slate-300 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition-all text-center block"
+              onClick={() => setIsSupportModalOpen(true)}
+              className="w-full py-1.5 px-3 rounded-xl bg-white border border-slate-200 hover:border-blue-300 text-xs font-semibold text-blue-700 shadow-xs hover:bg-blue-50 transition-all text-center block"
             >
               Contact Support
             </button>
           </div>
         </div>
       </aside>
+
+      {/* Support & Complaint Modal */}
+      {isSupportModalOpen && (
+        <ContactSupportModal
+          isOpen={isSupportModalOpen}
+          onClose={() => setIsSupportModalOpen(false)}
+        />
+      )}
     </>
   );
 };

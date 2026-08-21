@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { UserProfile, UserRole, SignUpData } from '../types/auth';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
-import { DEMO_PROFILES } from '../lib/mockData';
+import { getStoredUsers, createUser, updateUserName, DEFAULT_ADMIN } from '../lib/userService';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -19,7 +19,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const LOCAL_STORAGE_DEMO_KEY = 'exam_fight_demo_user';
+const LOCAL_STORAGE_DEMO_KEY = 'exam_fight_current_user_email';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -37,7 +37,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (error || !data) {
-        // Fallback: If trigger was delayed, construct temporary profile
         return {
           id: userId,
           email: email || '',
@@ -61,38 +60,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let isMounted = true;
 
     const initializeAuth = async () => {
-      setIsLoading(true);
-
-      // Check if there is an active demo session saved in localStorage
-      const savedDemoRole = localStorage.getItem(LOCAL_STORAGE_DEMO_KEY) as UserRole | null;
-      if (savedDemoRole && DEMO_PROFILES[savedDemoRole]) {
-        if (isMounted) {
-          setUser(DEMO_PROFILES[savedDemoRole]);
-          setIsDemo(true);
-          setIsLoading(false);
-        }
-        return;
-      }
-
-      if (!isConfigured) {
-        // Supabase keys are not configured yet, default to idle demo-ready state
-        if (isMounted) {
-          setUser(null);
-          setIsDemo(true);
-          setIsLoading(false);
-        }
-        return;
-      }
-
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user && isMounted) {
-          const profile = await fetchProfile(session.user.id, session.user.email);
-          setUser(profile);
-          setIsDemo(false);
+        if (isConfigured) {
+          const { data: { session }, error } = await supabase.auth.getSession();
+          if (error) throw error;
+
+          if (session?.user && isMounted) {
+            const profile = await fetchProfile(session.user.id, session.user.email);
+            setUser(profile);
+            setIsDemo(false);
+          }
+        } else {
+          // Check local stored session
+          const savedEmail = localStorage.getItem(LOCAL_STORAGE_DEMO_KEY);
+          const allUsers = getStoredUsers();
+
+          if (savedEmail) {
+            const matched = allUsers.find(
+              (u) => u.email.toLowerCase() === savedEmail.toLowerCase()
+            );
+            if (matched && isMounted) {
+              setUser(matched);
+              setIsDemo(true);
+            }
+          }
         }
       } catch (err) {
-        console.error('Session retrieval error:', err);
+        console.error('Auth initialization error:', err);
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -126,32 +120,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [isConfigured, fetchProfile]);
 
-  // Demo Login Handler for instant multi-role testing
+  // Direct login by role helper
   const demoLogin = (selectedRole: UserRole) => {
-    const demoProfile = DEMO_PROFILES[selectedRole];
-    if (demoProfile) {
-      localStorage.setItem(LOCAL_STORAGE_DEMO_KEY, selectedRole);
-      setUser(demoProfile);
-      setIsDemo(true);
+    const allUsers = getStoredUsers();
+    let matched = allUsers.find((u) => u.role === selectedRole);
+    if (!matched) {
+      if (selectedRole === 'admin') {
+        matched = DEFAULT_ADMIN;
+      } else {
+        matched = createUser(
+          `${selectedRole}@chem.edu`,
+          selectedRole === 'teacher' ? 'Faculty Instructor' : 'Student Candidate',
+          selectedRole
+        );
+      }
     }
+    localStorage.setItem(LOCAL_STORAGE_DEMO_KEY, matched.email);
+    setUser(matched);
+    setIsDemo(true);
   };
 
   // Sign In
   const signIn = async (email: string, password?: string): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true);
     try {
-      // Check if user is logging in with demo credentials or in demo mode
-      const matchedDemo = Object.values(DEMO_PROFILES).find(p => p.email.toLowerCase() === email.toLowerCase());
-      if (matchedDemo && (!isConfigured || !password)) {
-        demoLogin(matchedDemo.role);
-        setIsLoading(false);
-        return { success: true };
-      }
-
       if (!isConfigured) {
-        // If not configured and unknown email, match role heuristically or default to student
-        const role: UserRole = email.includes('teacher') ? 'teacher' : email.includes('admin') ? 'admin' : 'student';
-        demoLogin(role);
+        const allUsers = getStoredUsers();
+        let matched = allUsers.find((u) => u.email.toLowerCase() === email.toLowerCase());
+
+        if (!matched) {
+          // If admin email
+          if (email.toLowerCase().includes('admin')) {
+            matched = DEFAULT_ADMIN;
+          } else {
+            // Determine role and create user
+            const role: UserRole = email.includes('teacher') || email.includes('faculty') ? 'teacher' : 'student';
+            matched = createUser(email, email.split('@')[0], role);
+          }
+        }
+
+        localStorage.setItem(LOCAL_STORAGE_DEMO_KEY, matched.email);
+        setUser(matched);
+        setIsDemo(true);
         setIsLoading(false);
         return { success: true };
       }
@@ -185,22 +195,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (data: SignUpData): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true);
     try {
-      // SECURITY ENFORCEMENT: Never allow admin role via public signup
       const safeRole: 'student' | 'teacher' = data.role === 'teacher' ? 'teacher' : 'student';
 
       if (!isConfigured) {
-        // Demo mode simulated registration
-        const newDemoProfile: UserProfile = {
-          id: `demo-${safeRole}-${Date.now()}`,
-          email: data.email,
-          full_name: data.fullName,
-          role: safeRole,
-          avatar_url: null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-        localStorage.setItem(LOCAL_STORAGE_DEMO_KEY, safeRole);
-        setUser(newDemoProfile);
+        const newUser = createUser(data.email, data.fullName, safeRole);
+        localStorage.setItem(LOCAL_STORAGE_DEMO_KEY, newUser.email);
+        setUser(newUser);
         setIsDemo(true);
         setIsLoading(false);
         return { success: true };
@@ -213,7 +213,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         options: {
           data: {
             full_name: data.fullName,
-            role: safeRole, // Trigger will sanitize this on server-side
+            role: safeRole,
             teacher_code: data.teacherCode || null,
           },
         },
@@ -271,12 +271,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Update Profile
+  // Update Profile (Admin, Teacher, Student updating their own name)
   const updateProfile = async (updates: Partial<UserProfile>): Promise<{ success: boolean; error?: string }> => {
     if (!user) return { success: false, error: 'Not authenticated' };
 
-    // Prevent changing role via client update
     const { role, ...safeUpdates } = updates;
+
+    if (safeUpdates.full_name) {
+      updateUserName(user.id, safeUpdates.full_name);
+    }
 
     if (isDemo || !isConfigured) {
       setUser({ ...user, ...safeUpdates });
@@ -289,38 +292,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .update(safeUpdates)
         .eq('id', user.id);
 
-      if (error) return { success: false, error: error.message };
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
       setUser({ ...user, ...safeUpdates });
       return { success: true };
     } catch (err: any) {
-      return { success: false, error: err.message };
+      return { success: false, error: err.message || 'Profile update failed.' };
     }
   };
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        role: user?.role || null,
-        isLoading,
-        isDemo,
-        isConfigured,
-        signIn,
-        signUp,
-        signOut,
-        resetPassword,
-        demoLogin,
-        updateProfile,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+  const value: AuthContextType = {
+    user,
+    role: user?.role || null,
+    isLoading,
+    isDemo,
+    isConfigured,
+    signIn,
+    signUp,
+    signOut,
+    resetPassword,
+    demoLogin,
+    updateProfile,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-export const useAuth = () => {
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;

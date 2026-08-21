@@ -1,13 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Navbar } from '../common/Navbar';
-import { ShieldCheck, Mail, Lock, BookOpen, FlaskConical } from 'lucide-react';
+import { ContactSupportModal } from '../common/ContactSupportModal';
+import { ShieldCheck, Lock, BookOpen, FlaskConical, LifeBuoy } from 'lucide-react';
 
 interface PublicLayoutProps {
   children: React.ReactNode;
 }
 
 export const PublicLayout: React.FC<PublicLayoutProps> = ({ children }) => {
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col relative selection:bg-blue-500 selection:text-white">
       {/* Public Header */}
@@ -71,20 +74,30 @@ export const PublicLayout: React.FC<PublicLayoutProps> = ({ children }) => {
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-3">Governance & Support</h4>
               <ul className="space-y-2 text-xs text-slate-600">
                 <li>
-                  <span className="hover:text-blue-600 transition-colors cursor-pointer" onClick={() => alert('Privacy Policy: All examination proctoring streams and audio recordings are encrypted and retained strictly per institution policy.')}>
+                  <span
+                    className="hover:text-blue-600 transition-colors cursor-pointer"
+                    onClick={() => alert('Privacy Policy: Examination video feeds, scans, and audio logs are retained strictly according to academic compliance.')}
+                  >
                     Privacy Policy
                   </span>
                 </li>
                 <li>
-                  <span className="hover:text-blue-600 transition-colors cursor-pointer" onClick={() => alert('Terms: Examination integrity standards are enforced under institutional honor code guidelines.')}>
+                  <span
+                    className="hover:text-blue-600 transition-colors cursor-pointer"
+                    onClick={() => alert('Terms of Service: Candidates must complete mandatory 360° room scan prior to examination start.')}
+                  >
                     Terms of Academic Service
                   </span>
                 </li>
                 <li>
-                  <a href="mailto:support@examfight.edu" className="hover:text-blue-600 transition-colors flex items-center gap-1.5">
-                    <Mail className="w-3.5 h-3.5 text-slate-400" />
-                    Contact Examination Support
-                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setIsSupportModalOpen(true)}
+                    className="hover:text-blue-600 transition-colors flex items-center gap-1.5 text-blue-600 font-semibold text-xs"
+                  >
+                    <LifeBuoy className="w-3.5 h-3.5" />
+                    Contact Support / File Complaint
+                  </button>
                 </li>
               </ul>
             </div>
@@ -106,6 +119,14 @@ export const PublicLayout: React.FC<PublicLayoutProps> = ({ children }) => {
           </div>
         </div>
       </footer>
+
+      {/* Support / Complaint Modal */}
+      {isSupportModalOpen && (
+        <ContactSupportModal
+          isOpen={isSupportModalOpen}
+          onClose={() => setIsSupportModalOpen(false)}
+        />
+      )}
     </div>
   );
 };

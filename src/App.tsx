@@ -37,6 +37,7 @@ import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { AdminUsersPage } from './pages/admin/AdminUsersPage';
 import { AdminTeachersPage } from './pages/admin/AdminTeachersPage';
 import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
+import { AdminComplaintsPage } from './pages/admin/AdminComplaintsPage';
 
 export const App: React.FC = () => {
   return (
@@ -309,6 +310,22 @@ export const App: React.FC = () => {
                 </RoleGuard>
               </ProtectedRoute>
             }
+          />
+          <Route
+            path="/admin/complaints"
+            element={
+              <ProtectedRoute>
+                <RoleGuard allowedRoles={['admin']}>
+                  <DashboardLayout>
+                    <AdminComplaintsPage />
+                  </DashboardLayout>
+                </RoleGuard>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/support"
+            element={<Navigate to="/admin/complaints" replace />}
           />
           <Route
             path="/admin/settings"

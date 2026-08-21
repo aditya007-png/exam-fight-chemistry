@@ -2,31 +2,13 @@ import { UserProfile } from '../types/auth';
 import { ExamItem, RecentResult, ClassItem, AuditLogItem, AdminStats } from '../types/dashboard';
 
 export const DEMO_PROFILES: Record<string, UserProfile> = {
-  student: {
-    id: 'demo-student-001',
-    email: 'alex.chen@chem.edu',
-    full_name: 'Alex Chen',
-    role: 'student',
-    avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    created_at: new Date(Date.now() - 30 * 86400000).toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  teacher: {
-    id: 'demo-teacher-001',
-    email: 'dr.feynman@chem.edu',
-    full_name: 'Dr. Evelyn Vance',
-    role: 'teacher',
-    avatar_url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-    created_at: new Date(Date.now() - 60 * 86400000).toISOString(),
-    updated_at: new Date().toISOString(),
-  },
   admin: {
-    id: 'demo-admin-001',
+    id: 'admin-001',
     email: 'admin@examfight.chem',
-    full_name: 'Prof. Arthur Pendelton',
+    full_name: 'Administrator',
     role: 'admin',
     avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    created_at: new Date(Date.now() - 90 * 86400000).toISOString(),
+    created_at: '2026-01-01T00:00:00.000Z',
     updated_at: new Date().toISOString(),
   },
 };
@@ -266,52 +248,12 @@ export const MOCK_ADMIN_STATS: AdminStats = {
 
 export const MOCK_ADMIN_USERS: UserProfile[] = [
   {
-    id: 'u-001',
-    email: 'alex.chen@chem.edu',
-    full_name: 'Alex Chen',
-    role: 'student',
-    created_at: '2026-01-15T08:30:00Z',
-    updated_at: '2026-02-18T12:00:00Z',
-  },
-  {
-    id: 'u-002',
-    email: 'dr.feynman@chem.edu',
-    full_name: 'Dr. Evelyn Vance',
-    role: 'teacher',
-    created_at: '2025-11-20T14:20:00Z',
-    updated_at: '2026-02-20T09:45:00Z',
-  },
-  {
-    id: 'u-003',
+    id: 'admin-001',
     email: 'admin@examfight.chem',
-    full_name: 'Prof. Arthur Pendelton',
+    full_name: 'Administrator',
     role: 'admin',
-    created_at: '2025-09-01T10:00:00Z',
-    updated_at: '2026-02-21T18:00:00Z',
-  },
-  {
-    id: 'u-004',
-    email: 'sarah.lin@chem.edu',
-    full_name: 'Sarah Lin',
-    role: 'student',
-    created_at: '2026-02-01T11:15:00Z',
-    updated_at: '2026-02-19T16:30:00Z',
-  },
-  {
-    id: 'u-005',
-    email: 'm.holloway@chem.edu',
-    full_name: 'Dr. Marcus Holloway',
-    role: 'teacher',
-    created_at: '2025-12-05T09:00:00Z',
-    updated_at: '2026-02-14T11:20:00Z',
-  },
-  {
-    id: 'u-006',
-    email: 'priya.patel@chem.edu',
-    full_name: 'Priya Patel',
-    role: 'student',
-    created_at: '2026-01-22T13:40:00Z',
-    updated_at: '2026-02-21T08:15:00Z',
+    created_at: '2026-01-01T00:00:00.000Z',
+    updated_at: new Date().toISOString(),
   },
 ];
 
