@@ -115,9 +115,23 @@ export const getSectionById = (sectionId: string): AcademicSection | null => {
 };
 
 export const getSectionByCode = (code: string): AcademicSection | null => {
-  const normalized = code.trim().toUpperCase();
+  if (!code || !code.trim()) return null;
+  const clean = code.trim().toUpperCase();
+  const stripped = clean.replace(/[^A-Z0-9]/g, '');
   const sections = getStoredSections();
-  return sections.find((s) => s.enrollmentCode.toUpperCase() === normalized) || null;
+
+  return (
+    sections.find((s) => {
+      const secClean = s.enrollmentCode.toUpperCase();
+      const secStripped = secClean.replace(/[^A-Z0-9]/g, '');
+      return (
+        secClean === clean ||
+        secStripped === stripped ||
+        (clean.length >= 3 && secClean.endsWith(clean)) ||
+        (stripped.length >= 3 && secStripped.endsWith(stripped))
+      );
+    }) || null
+  );
 };
 
 export const createSection = (
@@ -169,6 +183,7 @@ export const deleteSection = (sectionId: string): void => {
 export const getStoredEnrollments = (filters?: {
   sectionId?: string;
   studentId?: string;
+  studentEmail?: string;
   teacherId?: string;
   classId?: string;
 }): ClassEnrollment[] => {
@@ -180,8 +195,11 @@ export const getStoredEnrollments = (filters?: {
     if (filters?.sectionId) {
       list = list.filter((e) => e.sectionId === filters.sectionId);
     }
-    if (filters?.studentId) {
-      list = list.filter((e) => e.studentId === filters.studentId);
+    if (filters?.studentId || filters?.studentEmail) {
+      list = list.filter((e) =>
+        (filters.studentId && e.studentId === filters.studentId) ||
+        (filters.studentEmail && e.studentEmail.toLowerCase() === filters.studentEmail.toLowerCase())
+      );
     }
     if (filters?.teacherId) {
       list = list.filter((e) => e.teacherId === filters.teacherId);
@@ -217,7 +235,7 @@ export const joinClassByCode = (
 
   const section = getSectionByCode(code);
   if (!section) {
-    return { success: false, error: 'Invalid or expired enrollment code.' };
+    return { success: false, error: `Invalid or expired enrollment code "${enrollmentCode.trim()}". Please verify the code with your teacher.` };
   }
 
   const cls = getClassById(section.classId);
@@ -226,15 +244,20 @@ export const joinClassByCode = (
   }
 
   // Check if student is already enrolled in this section
-  const existing = getStoredEnrollments({ sectionId: section.id, studentId });
+  const existing = getStoredEnrollments({ sectionId: section.id }).filter(
+    (e) =>
+      (studentId && e.studentId === studentId) ||
+      (studentEmail && e.studentEmail && e.studentEmail.toLowerCase() === studentEmail.toLowerCase())
+  );
   if (existing.length > 0 && existing.some((e) => e.status === 'active')) {
-    return { success: false, error: 'You are already enrolled in this section.' };
+    return { success: false, error: `You are already enrolled in ${cls.name} (${section.name}).` };
   }
 
   const allEnrollments = getStoredEnrollments();
+  const effectiveStudentId = studentId || `stu-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
   const newEnrollment: ClassEnrollment = {
     id: `enr-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-    studentId,
+    studentId: effectiveStudentId,
     studentName: studentName || 'Student',
     studentEmail: studentEmail || '',
     classId: cls.id,
@@ -263,17 +286,30 @@ export const removeStudentFromSection = (enrollmentId: string): void => {
   saveStoredEnrollments(enrollments);
 };
 
-export const getStudentEnrolledSectionIds = (studentId: string): string[] => {
-  const enrollments = getStoredEnrollments({ studentId });
-  return enrollments.filter((e) => e.status === 'active').map((e) => e.sectionId);
+export const getStudentEnrolledSectionIds = (studentId: string, studentEmail?: string): string[] => {
+  const allEnrollments = getStoredEnrollments();
+  return allEnrollments
+    .filter(
+      (e) =>
+        e.status === 'active' &&
+        ((studentId && e.studentId === studentId) ||
+         (studentEmail && e.studentEmail && e.studentEmail.toLowerCase() === studentEmail.toLowerCase()))
+    )
+    .map((e) => e.sectionId);
 };
 
-export const getStudentEnrolledClasses = (studentId: string): Array<{
+export const getStudentEnrolledClasses = (studentId: string, studentEmail?: string): Array<{
   class: AcademicClass;
   section: AcademicSection;
   enrollment: ClassEnrollment;
 }> => {
-  const enrollments = getStoredEnrollments({ studentId }).filter((e) => e.status === 'active');
+  const allEnrollments = getStoredEnrollments();
+  const enrollments = allEnrollments.filter(
+    (e) =>
+      e.status === 'active' &&
+      ((studentId && e.studentId === studentId) ||
+       (studentEmail && e.studentEmail && e.studentEmail.toLowerCase() === studentEmail.toLowerCase()))
+  );
   const result: Array<{
     class: AcademicClass;
     section: AcademicSection;

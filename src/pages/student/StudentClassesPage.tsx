@@ -47,16 +47,14 @@ export const StudentClassesPage: React.FC = () => {
   const [joinSuccess, setJoinSuccess] = useState<string | null>(null);
 
   const loadData = () => {
-    if (studentId) {
-      const list = getStudentEnrolledClasses(studentId);
-      setEnrolledClasses(list);
-    }
+    const list = getStudentEnrolledClasses(studentId, studentEmail);
+    setEnrolledClasses(list);
     setAllExams(getStoredExams());
   };
 
   useEffect(() => {
     loadData();
-  }, [studentId]);
+  }, [studentId, studentEmail]);
 
   const handleJoinClass = (e: React.FormEvent) => {
     e.preventDefault();

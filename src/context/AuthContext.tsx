@@ -212,6 +212,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (authData.user) {
+        createUser(data.email, data.fullName, safeRole);
         if (safeRole === 'teacher' && data.teacherCode) {
           claimTeacherCode(data.teacherCode, data.email, data.fullName);
         }

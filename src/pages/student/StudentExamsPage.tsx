@@ -12,13 +12,13 @@ export const StudentExamsPage: React.FC = () => {
   const [exams, setExams] = useState<ExamItem[]>([]);
 
   useEffect(() => {
-    if (user?.id) {
-      const secIds = getStudentEnrolledSectionIds(user.id);
+    if (user?.id || user?.email) {
+      const secIds = getStudentEnrolledSectionIds(user?.id || '', user?.email || '');
       setExams(getExamsForStudent(secIds));
     } else {
       setExams([]);
     }
-  }, [user?.id]);
+  }, [user?.id, user?.email]);
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto py-2">

@@ -26,11 +26,11 @@ export const StudentDashboard: React.FC = () => {
   const [enrolledClassesCount, setEnrolledClassesCount] = useState<number>(0);
 
   useEffect(() => {
-    if (user?.id) {
-      const secIds = getStudentEnrolledSectionIds(user.id);
+    if (user?.id || user?.email) {
+      const secIds = getStudentEnrolledSectionIds(user?.id || '', user?.email || '');
       const studentExams = getExamsForStudent(secIds);
       setExams(studentExams);
-      const enr = getStudentEnrolledClasses(user.id);
+      const enr = getStudentEnrolledClasses(user?.id || '', user?.email || '');
       setEnrolledClassesCount(enr.length);
     } else {
       setExams([]);
