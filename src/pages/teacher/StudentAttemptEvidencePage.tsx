@@ -257,14 +257,21 @@ export const StudentAttemptEvidencePage: React.FC = () => {
 
           {/* Video Container */}
           <div className="relative aspect-video rounded-2xl bg-slate-950 overflow-hidden shadow-md flex items-center justify-center group">
-            <video
-              ref={videoRef}
-              src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
-              onTimeUpdate={handleTimeUpdate}
-              onLoadedMetadata={handleLoadedMetadata}
-              className="w-full h-full object-contain cursor-pointer"
-              onClick={handleTogglePlay}
-            />
+            {evidenceData?.roomScanVideo?.filePath ? (
+              <video
+                ref={videoRef}
+                src={evidenceData.roomScanVideo.filePath}
+                onTimeUpdate={handleTimeUpdate}
+                onLoadedMetadata={handleLoadedMetadata}
+                className="w-full h-full object-contain cursor-pointer"
+                onClick={handleTogglePlay}
+              />
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 bg-slate-900">
+                <Video className="w-10 h-10 mb-2 opacity-50" />
+                <span className="font-mono text-xs uppercase">No Recording Found for this Attempt</span>
+              </div>
+            )}
 
             {/* Centered Play Button Overlay */}
             {!isPlaying && (

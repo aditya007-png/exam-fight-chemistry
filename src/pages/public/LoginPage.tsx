@@ -3,11 +3,10 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useRole } from '../../hooks/useRole';
 import { Button } from '../../components/common/Button';
-import { Lock, Mail, AlertCircle, Sparkles, FlaskConical } from 'lucide-react';
-import { UserRole } from '../../types/auth';
+import { Lock, Mail, AlertCircle, FlaskConical } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
-  const { signIn, demoLogin, user, role, isLoading } = useAuth();
+  const { signIn, user, role, isLoading } = useAuth();
   const { getDashboardPath } = useRole();
   const navigate = useNavigate();
   const location = useLocation();
@@ -37,22 +36,6 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const handleQuickLogin = (selectedRole: UserRole) => {
-    demoLogin(selectedRole);
-    switch (selectedRole) {
-      case 'admin':
-        navigate('/admin/dashboard');
-        break;
-      case 'teacher':
-        navigate('/teacher/dashboard');
-        break;
-      case 'student':
-      default:
-        navigate('/student/dashboard');
-        break;
-    }
-  };
-
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 py-12">
       <div className="w-full max-w-md space-y-6">
@@ -67,43 +50,6 @@ export const LoginPage: React.FC = () => {
           <p className="text-xs sm:text-sm text-slate-500">
             Enter your credentials to access your chemistry examination environment
           </p>
-        </div>
-
-        {/* Demo Fast Login Box */}
-        <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-2.5 shadow-card">
-          <div className="flex items-center justify-between text-xs text-blue-700 font-semibold">
-            <span className="flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-              1-Click Role Testing Access
-            </span>
-            <span className="text-[10px] text-slate-400 font-mono">Instant Auth</span>
-          </div>
-          <div className="grid grid-cols-3 gap-2 pt-1">
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('student')}
-              className="px-2.5 py-2 rounded-xl bg-slate-50 hover:bg-blue-50 border border-slate-200 text-slate-800 text-xs font-semibold transition-all flex flex-col items-center gap-0.5"
-            >
-              <span className="text-[11px] font-bold text-blue-700">Student</span>
-              <span className="text-[10px] text-slate-500">Alex Chen</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('teacher')}
-              className="px-2.5 py-2 rounded-xl bg-slate-50 hover:bg-blue-50 border border-slate-200 text-slate-800 text-xs font-semibold transition-all flex flex-col items-center gap-0.5"
-            >
-              <span className="text-[11px] font-bold text-indigo-700">Teacher</span>
-              <span className="text-[10px] text-slate-500">Dr. Vance</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('admin')}
-              className="px-2.5 py-2 rounded-xl bg-slate-50 hover:bg-blue-50 border border-slate-200 text-slate-800 text-xs font-semibold transition-all flex flex-col items-center gap-0.5"
-            >
-              <span className="text-[11px] font-bold text-amber-700">Admin</span>
-              <span className="text-[10px] text-slate-500">Prof. Arthur</span>
-            </button>
-          </div>
         </div>
 
         {/* Login Card */}

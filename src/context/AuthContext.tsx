@@ -2,29 +2,27 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { UserProfile, UserRole, SignUpData } from '../types/auth';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { getStoredUsers, createUser, updateUserName, DEFAULT_ADMIN } from '../lib/userService';
+import { validateTeacherCode, claimTeacherCode } from '../lib/teacherCodeService';
 
 interface AuthContextType {
   user: UserProfile | null;
   role: UserRole | null;
   isLoading: boolean;
-  isDemo: boolean;
   isConfigured: boolean;
   signIn: (email: string, password?: string) => Promise<{ success: boolean; error?: string }>;
   signUp: (data: SignUpData) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
-  demoLogin: (role: UserRole) => void;
   updateProfile: (updates: Partial<UserProfile>) => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const LOCAL_STORAGE_DEMO_KEY = 'exam_fight_current_user_email';
+const LOCAL_STORAGE_SESSION_KEY = 'exam_fight_current_user_email';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isDemo, setIsDemo] = useState<boolean>(false);
   const isConfigured = isSupabaseConfigured();
 
   // Load user profile from Supabase DB by user ID
@@ -68,11 +66,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (session?.user && isMounted) {
             const profile = await fetchProfile(session.user.id, session.user.email);
             setUser(profile);
-            setIsDemo(false);
           }
         } else {
           // Check local stored session
-          const savedEmail = localStorage.getItem(LOCAL_STORAGE_DEMO_KEY);
+          const savedEmail = localStorage.getItem(LOCAL_STORAGE_SESSION_KEY);
           const allUsers = getStoredUsers();
 
           if (savedEmail) {
@@ -81,7 +78,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             );
             if (matched && isMounted) {
               setUser(matched);
-              setIsDemo(true);
             }
           }
         }
@@ -102,7 +98,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (session?.user) {
           const profile = await fetchProfile(session.user.id, session.user.email);
           setUser(profile);
-          setIsDemo(false);
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
         }
@@ -119,26 +114,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isMounted = false;
     };
   }, [isConfigured, fetchProfile]);
-
-  // Direct login by role helper
-  const demoLogin = (selectedRole: UserRole) => {
-    const allUsers = getStoredUsers();
-    let matched = allUsers.find((u) => u.role === selectedRole);
-    if (!matched) {
-      if (selectedRole === 'admin') {
-        matched = DEFAULT_ADMIN;
-      } else {
-        matched = createUser(
-          `${selectedRole}@chem.edu`,
-          selectedRole === 'teacher' ? 'Faculty Instructor' : 'Student Candidate',
-          selectedRole
-        );
-      }
-    }
-    localStorage.setItem(LOCAL_STORAGE_DEMO_KEY, matched.email);
-    setUser(matched);
-    setIsDemo(true);
-  };
 
   // Sign In
   const signIn = async (email: string, password?: string): Promise<{ success: boolean; error?: string }> => {
@@ -159,9 +134,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
 
-        localStorage.setItem(LOCAL_STORAGE_DEMO_KEY, matched.email);
+        localStorage.setItem(LOCAL_STORAGE_SESSION_KEY, matched.email);
         setUser(matched);
-        setIsDemo(true);
         setIsLoading(false);
         return { success: true };
       }
@@ -177,10 +151,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (data.user) {
-        localStorage.removeItem(LOCAL_STORAGE_DEMO_KEY);
+        localStorage.removeItem(LOCAL_STORAGE_SESSION_KEY);
         const profile = await fetchProfile(data.user.id, data.user.email);
         setUser(profile);
-        setIsDemo(false);
       }
 
       setIsLoading(false);
@@ -197,11 +170,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const safeRole: 'student' | 'teacher' = data.role === 'teacher' ? 'teacher' : 'student';
 
+      // Strictly enforce mandatory teacher verification code
+      if (safeRole === 'teacher') {
+        const codeValidation = validateTeacherCode(data.teacherCode || '');
+        if (!codeValidation.isValid) {
+          setIsLoading(false);
+          return {
+            success: false,
+            error: codeValidation.error || 'A valid teacher verification code issued by Admin is mandatory to register as faculty.',
+          };
+        }
+      }
+
       if (!isConfigured) {
         const newUser = createUser(data.email, data.fullName, safeRole);
-        localStorage.setItem(LOCAL_STORAGE_DEMO_KEY, newUser.email);
+        if (safeRole === 'teacher' && data.teacherCode) {
+          claimTeacherCode(data.teacherCode, data.email, data.fullName);
+        }
+        localStorage.setItem(LOCAL_STORAGE_SESSION_KEY, newUser.email);
         setUser(newUser);
-        setIsDemo(true);
         setIsLoading(false);
         return { success: true };
       }
@@ -225,10 +212,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (authData.user) {
-        localStorage.removeItem(LOCAL_STORAGE_DEMO_KEY);
+        if (safeRole === 'teacher' && data.teacherCode) {
+          claimTeacherCode(data.teacherCode, data.email, data.fullName);
+        }
+        localStorage.removeItem(LOCAL_STORAGE_SESSION_KEY);
         const profile = await fetchProfile(authData.user.id, authData.user.email);
         setUser(profile);
-        setIsDemo(false);
       }
 
       setIsLoading(false);
@@ -243,7 +232,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     setIsLoading(true);
     try {
-      localStorage.removeItem(LOCAL_STORAGE_DEMO_KEY);
+      localStorage.removeItem(LOCAL_STORAGE_SESSION_KEY);
       if (isConfigured) {
         await supabase.auth.signOut();
       }
@@ -281,7 +270,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updateUserName(user.id, safeUpdates.full_name);
     }
 
-    if (isDemo || !isConfigured) {
+    if (!isConfigured) {
       setUser({ ...user, ...safeUpdates });
       return { success: true };
     }
@@ -307,13 +296,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     role: user?.role || null,
     isLoading,
-    isDemo,
     isConfigured,
     signIn,
     signUp,
     signOut,
     resetPassword,
-    demoLogin,
     updateProfile,
   };
 

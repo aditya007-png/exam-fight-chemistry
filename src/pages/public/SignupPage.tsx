@@ -154,22 +154,28 @@ export const SignupPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Teacher Verification Code (Shown when teacher selected) */}
+            {/* Teacher Verification Code (Mandatory when teacher selected) */}
             {selectedRole === 'teacher' && (
-              <div className="p-3 rounded-xl bg-indigo-50/70 border border-indigo-200 space-y-1.5">
-                <label className="block text-xs font-semibold text-indigo-900 flex items-center gap-1.5">
-                  <KeyRound className="w-3.5 h-3.5 text-indigo-600" />
-                  Faculty Verification Code (Optional for trial)
+              <div className="p-3.5 rounded-xl bg-indigo-50/80 border border-indigo-200 space-y-1.5">
+                <label className="block text-xs font-bold text-indigo-950 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <KeyRound className="w-3.5 h-3.5 text-indigo-600" />
+                    Faculty Verification Code <span className="text-rose-500">*</span>
+                  </span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded">
+                    Mandatory (Issued by Admin)
+                  </span>
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. CHEM-FACULTY-2026-X9Y"
+                  required
+                  placeholder="e.g. CHEM-FACULTY-2026-XP9R"
                   value={teacherCode}
                   onChange={(e) => setTeacherCode(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-white border border-indigo-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 rounded-lg bg-white border border-indigo-300 text-xs font-mono font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
-                <p className="text-[10px] text-slate-500">
-                  Allows instant faculty verification and exam creation privileges.
+                <p className="text-[10px] text-slate-600 leading-relaxed">
+                  A valid authorization key from your institutional administrator is strictly required to register as a teacher.
                 </p>
               </div>
             )}

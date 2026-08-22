@@ -5,7 +5,6 @@ import {
   Maximize2,
   Minimize2,
   AlertTriangle,
-  FlaskConical,
   Glasses,
   CheckCircle2,
   Maximize,
@@ -17,8 +16,6 @@ interface ProctoringCornerWidgetProps {
   proctoringState: UnifiedProctoringState;
   onEnterFullscreen?: () => void;
   onRetryHardware?: () => void;
-  onSelectTestScenario?: (scenario: string | null) => void;
-  activeScenario?: string | null;
 }
 
 export const ProctoringCornerWidget: React.FC<ProctoringCornerWidgetProps> = ({
@@ -26,12 +23,9 @@ export const ProctoringCornerWidget: React.FC<ProctoringCornerWidgetProps> = ({
   proctoringState,
   onEnterFullscreen,
   onRetryHardware,
-  onSelectTestScenario,
-  activeScenario,
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [showTestPanel, setShowTestPanel] = useState(false);
 
   // Callback ref guarantees video stream attaches the exact millisecond video DOM node mounts
   const attachVideoRef = (node: HTMLVideoElement | null) => {
@@ -244,16 +238,7 @@ export const ProctoringCornerWidget: React.FC<ProctoringCornerWidgetProps> = ({
               </span>
             )}
 
-            <button
-              type="button"
-              onClick={() => setShowTestPanel(!showTestPanel)}
-              className={`p-1 rounded text-xs transition-colors ${
-                showTestPanel ? 'bg-blue-100 text-blue-700' : 'text-slate-400 hover:text-slate-700'
-              }`}
-              title="Test Proctoring Scenarios"
-            >
-              <FlaskConical className="w-3 h-3" />
-            </button>
+
 
             <button
               type="button"
@@ -358,78 +343,7 @@ export const ProctoringCornerWidget: React.FC<ProctoringCornerWidgetProps> = ({
             </div>
           )}
 
-          {/* Test Scenarios Panel */}
-          {showTestPanel && onSelectTestScenario && (
-            <div className="pt-1.5 border-t border-slate-100 space-y-1 text-[9px]">
-              <div className="flex items-center justify-between text-slate-500 font-bold uppercase tracking-wider">
-                <span>Tests:</span>
-                <button
-                  type="button"
-                  onClick={() => onSelectTestScenario(null)}
-                  className="text-blue-600 hover:underline font-bold"
-                >
-                  Live Feed
-                </button>
-              </div>
 
-              <div className="grid grid-cols-2 gap-1 font-medium">
-                <button
-                  type="button"
-                  onClick={() => onSelectTestScenario('TEST_1')}
-                  className={`p-0.5 rounded text-left truncate border ${
-                    activeScenario === 'TEST_1' ? 'bg-blue-600 text-white' : 'bg-slate-50 text-slate-700'
-                  }`}
-                >
-                  1: Normal Face
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSelectTestScenario('TEST_2')}
-                  className={`p-0.5 rounded text-left truncate border ${
-                    activeScenario === 'TEST_2' ? 'bg-rose-600 text-white' : 'bg-slate-50 text-slate-700'
-                  }`}
-                >
-                  2: Leaves Frame
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSelectTestScenario('TEST_3')}
-                  className={`p-0.5 rounded text-left truncate border ${
-                    activeScenario === 'TEST_3' ? 'bg-emerald-600 text-white' : 'bg-slate-50 text-slate-700'
-                  }`}
-                >
-                  3: Returns (0s)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSelectTestScenario('TEST_5')}
-                  className={`p-0.5 rounded text-left truncate border ${
-                    activeScenario === 'TEST_5' ? 'bg-amber-600 text-white' : 'bg-slate-50 text-slate-700'
-                  }`}
-                >
-                  5: Looks Away
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSelectTestScenario('TEST_9')}
-                  className={`p-0.5 rounded text-left truncate border ${
-                    activeScenario === 'TEST_9' ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-700'
-                  }`}
-                >
-                  9: Glasses
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSelectTestScenario('TEST_10')}
-                  className={`p-0.5 rounded text-left truncate border ${
-                    activeScenario === 'TEST_10' ? 'bg-rose-600 text-white' : 'bg-slate-50 text-slate-700'
-                  }`}
-                >
-                  10: 2 Faces
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 

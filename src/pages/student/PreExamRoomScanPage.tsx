@@ -23,8 +23,8 @@ export const PreExamRoomScanPage: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const activeExamId = examId || 'exam-act-001';
-  const attemptId = `att-${user?.id || 'demo'}-${Date.now()}`;
+  const activeExamId = examId || '';
+  const attemptId = `att-${user?.id || 'std'}-${Date.now()}`;
 
   const [step, setStep] = useState<'recording' | 'uploading' | 'uploaded'>('recording');
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
@@ -207,8 +207,8 @@ export const PreExamRoomScanPage: React.FC = () => {
     const { error } = await uploadRoomScanVideo({
       examId: activeExamId,
       attemptId,
-      studentId: user?.id || 'demo-student-001',
-      studentName: user?.full_name || 'Alex Chen',
+      studentId: user?.id || 'unknown-student',
+      studentName: user?.full_name || 'Student',
       videoBlob: blob,
       durationSeconds: Math.max(8, durationSecs),
       coverageDegrees: 360,
@@ -295,8 +295,8 @@ export const PreExamRoomScanPage: React.FC = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
     } else {
-      const demoBlob = new Blob(['360_ROOM_SCAN_VIDEO_STREAM'], { type: 'video/webm' });
-      autoSaveAndUploadEvidence(demoBlob, Math.max(8, recordingSeconds));
+      const fallbackBlob = new Blob(['ROOM_SCAN_VIDEO_STREAM'], { type: 'video/webm' });
+      autoSaveAndUploadEvidence(fallbackBlob, Math.max(8, recordingSeconds));
     }
   };
 

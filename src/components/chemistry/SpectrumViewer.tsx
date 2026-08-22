@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MOCK_SPECTRA_DATA } from '../../lib/spectraMockData';
+import { CHEMISTRY_SPECTRA_DATA } from '../../lib/chemistryReferenceData';
 import { MoleculeSpectrumData, NMRPeak, IRPeak } from '../../types/spectrum';
 import {
   Activity,
@@ -14,7 +14,7 @@ export const SpectrumViewer: React.FC = () => {
   const [selectedPeak, setSelectedPeak] = useState<NMRPeak | IRPeak | null>(null);
 
   const activeMolecule: MoleculeSpectrumData =
-    MOCK_SPECTRA_DATA[selectedMoleculeId] || MOCK_SPECTRA_DATA['ethanol'];
+    CHEMISTRY_SPECTRA_DATA[selectedMoleculeId] || CHEMISTRY_SPECTRA_DATA['ethanol'];
 
   return (
     <div className="rounded-2xl bg-surface-100 border border-slate-800 p-6 space-y-6 shadow-2xl">

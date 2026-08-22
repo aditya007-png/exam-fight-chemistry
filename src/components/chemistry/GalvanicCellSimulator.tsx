@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GALVANIC_ELECTRODES } from '../../lib/spectraMockData';
+import { GALVANIC_ELECTRODES } from '../../lib/chemistryReferenceData';
 import { GalvanicElectrode } from '../../types/spectrum';
 import {
   Zap,

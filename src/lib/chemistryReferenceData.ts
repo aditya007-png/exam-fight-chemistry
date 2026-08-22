@@ -1,6 +1,6 @@
 import { MoleculeSpectrumData, GalvanicElectrode, KineticsReaction } from '../types/spectrum';
 
-export const MOCK_SPECTRA_DATA: Record<string, MoleculeSpectrumData> = {
+export const CHEMISTRY_SPECTRA_DATA: Record<string, MoleculeSpectrumData> = {
   ethanol: {
     id: 'ethanol',
     moleculeName: 'Ethanol',

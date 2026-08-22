@@ -122,7 +122,7 @@ export const LandingPage: React.FC = () => {
     },
     {
       title: '360° Environmental Room Scan',
-      description: 'Mandatory pre-exam 360° room scan video ensures testing room perimeter integrity and candidate accountability.',
+      description: 'Mandatory pre-exam 360° room scan video ensures examination room perimeter integrity and candidate accountability.',
       icon: Video,
       badge: 'Integrity Gate',
     },
@@ -134,7 +134,7 @@ export const LandingPage: React.FC = () => {
     },
     {
       title: 'Full-Screen Strict Exam Mode',
-      description: 'Enforces distraction-free full-screen testing. Automatically records tab switches and window unfocus events.',
+      description: 'Enforces distraction-free full-screen examination. Automatically records tab switches and window unfocus events.',
       icon: Maximize,
       badge: 'Security',
     },
@@ -190,7 +190,7 @@ export const LandingPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Right Live Exam Card Preview */}
+            {/* Right Live Exam Card Interface */}
             <div className="lg:col-span-5">
               <div className="rounded-2xl bg-white border border-slate-200 shadow-card p-6 space-y-4">
                 <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -250,7 +250,7 @@ export const LandingPage: React.FC = () => {
               Academic Platform Features
             </span>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              Chemistry Testing & Proctoring Architecture
+              Chemistry Examination & Proctoring Architecture
             </h2>
             <p className="text-xs sm:text-sm text-slate-500">
               A comprehensive system designed specifically for chemistry examinations and integrity verification.
@@ -460,20 +460,29 @@ export const LandingPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Teacher Verification Code (Only when faculty selected) */}
+                    {/* Teacher Verification Code (Mandatory when faculty selected) */}
                     {signupRole === 'teacher' && (
-                      <div className="p-3 rounded-xl bg-indigo-50/70 border border-indigo-200 space-y-1">
-                        <label className="block text-xs font-semibold text-indigo-900 flex items-center gap-1.5">
-                          <KeyRound className="w-3.5 h-3.5 text-indigo-600" />
-                          Faculty Verification Code (Optional for trial)
+                      <div className="p-3.5 rounded-xl bg-indigo-50/80 border border-indigo-200 space-y-1.5">
+                        <label className="block text-xs font-bold text-indigo-950 flex items-center justify-between">
+                          <span className="flex items-center gap-1.5">
+                            <KeyRound className="w-3.5 h-3.5 text-indigo-600" />
+                            Faculty Verification Code <span className="text-rose-500">*</span>
+                          </span>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded">
+                            Mandatory (Issued by Admin)
+                          </span>
                         </label>
                         <input
                           type="text"
-                          placeholder="e.g. CHEM-FACULTY-2026-X9Y"
+                          required
+                          placeholder="e.g. CHEM-FACULTY-2026-XP9R"
                           value={signupTeacherCode}
                           onChange={(e) => setSignupTeacherCode(e.target.value)}
-                          className="w-full px-3 py-1.5 rounded-lg bg-white border border-indigo-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                          className="w-full px-3 py-2 rounded-lg bg-white border border-indigo-300 text-xs font-mono font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                         />
+                        <p className="text-[10px] text-slate-600 leading-relaxed">
+                          A valid authorization key from your institutional administrator is strictly required to register as a teacher.
+                        </p>
                       </div>
                     )}
 

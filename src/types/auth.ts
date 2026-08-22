@@ -14,7 +14,6 @@ export interface AuthState {
   user: UserProfile | null;
   role: UserRole | null;
   isLoading: boolean;
-  isDemo: boolean;
   error: string | null;
 }
 

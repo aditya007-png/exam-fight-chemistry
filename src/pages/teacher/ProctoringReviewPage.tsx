@@ -5,6 +5,7 @@ import {
   getStudentAttemptEvidence,
   grantExamRestart,
 } from '../../lib/evidenceService';
+import { getStoredExams } from '../../lib/examService';
 import {
   ExamAttempt,
   StudentAttemptEvidenceSummary,
@@ -57,83 +58,7 @@ interface ExamSubjectTest {
   liveCount: number;
 }
 
-const EXAM_SUBJECT_TESTS: ExamSubjectTest[] = [
-  {
-    id: 'exam-act-001',
-    code: 'CHEM-302',
-    title: 'Organic Chemistry — Unit Test',
-    subject: 'Organic Chemistry',
-    testType: 'Unit Examination',
-    className: '12-A',
-    enrolled: 42,
-    submitted: 40,
-    flaggedCount: 2,
-    duration: '60 min',
-    date: 'Today',
-    isLive: true,
-    liveCount: 2,
-  },
-  {
-    id: 'exam-act-002',
-    code: 'CHEM-301',
-    title: 'Inorganic Chemistry — Mid Term',
-    subject: 'Inorganic Chemistry',
-    testType: 'Mid-Term Examination',
-    className: '12-B',
-    enrolled: 38,
-    submitted: 37,
-    flaggedCount: 1,
-    duration: '90 min',
-    date: 'Yesterday',
-    isLive: true,
-    liveCount: 1,
-  },
-  {
-    id: 'exam-act-003',
-    code: 'CHEM-201',
-    title: 'Physical Chemistry — Quiz 3',
-    subject: 'Physical Chemistry',
-    testType: 'Chapter Quiz',
-    className: '11-A',
-    enrolled: 45,
-    submitted: 45,
-    flaggedCount: 0,
-    duration: '45 min',
-    date: '20 Aug',
-    isLive: false,
-    liveCount: 0,
-  },
-  {
-    id: 'exam-act-004',
-    code: 'CHEM-401',
-    title: 'Biochemistry — Reaction Mechanisms',
-    subject: 'Biochemistry',
-    testType: 'Practical Assessment',
-    className: '12-A',
-    enrolled: 35,
-    submitted: 35,
-    flaggedCount: 1,
-    duration: '60 min',
-    date: '18 Aug',
-    isLive: false,
-    liveCount: 0,
-  },
-  {
-    id: 'exam-act-005',
-    code: 'CHEM-305',
-    title: 'Analytical Chemistry — Spectrometry Lab',
-    subject: 'Analytical Chemistry',
-    testType: 'Lab Practical',
-    className: '12-B',
-    enrolled: 30,
-    submitted: 30,
-    flaggedCount: 0,
-    duration: '75 min',
-    date: '15 Aug',
-    isLive: false,
-    liveCount: 0,
-  },
-];
+
 
 export const ProctoringReviewPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -204,8 +129,29 @@ export const ProctoringReviewPage: React.FC = () => {
   const [selectedSnapshotModal, setSelectedSnapshotModal] = useState<EvidenceSnapshot | null>(null);
   const [auditDecision, setAuditDecision] = useState<'pending' | 'approved' | 'flagged'>('pending');
 
-  const currentExamMeta =
-    EXAM_SUBJECT_TESTS.find((e) => e.id === selectedExamId) || EXAM_SUBJECT_TESTS[0];
+  const [exams, setExams] = useState<ExamSubjectTest[]>([]);
+
+  useEffect(() => {
+    const stored = getStoredExams();
+    const mapped: ExamSubjectTest[] = stored.map((e) => ({
+      id: e.id,
+      code: e.courseCode || `CHEM-${e.id.substring(0, 4).toUpperCase()}`,
+      title: e.title,
+      subject: e.topic || e.courseName || 'Chemistry',
+      testType: e.status === 'active' ? 'Live Exam' : 'Completed Exam',
+      className: e.courseCode || 'All Batches',
+      enrolled: 0,
+      submitted: 0,
+      flaggedCount: 0,
+      duration: `${e.durationMinutes || 60} min`,
+      date: e.scheduledStart ? new Date(e.scheduledStart).toLocaleDateString() : 'Active',
+      isLive: e.status === 'active',
+      liveCount: 0,
+    }));
+    setExams(mapped);
+  }, []);
+
+  const currentExamMeta = exams.find((e) => e.id === selectedExamId) || exams[0];
 
   // Load attempts when an exam is selected
   useEffect(() => {
@@ -242,7 +188,7 @@ export const ProctoringReviewPage: React.FC = () => {
     setSearchParams({});
   };
 
-  const filteredTests = EXAM_SUBJECT_TESTS.filter((exam) => {
+  const filteredTests = exams.filter((exam) => {
     const matchesSubject = subjectFilter === 'all' || exam.subject.toLowerCase().includes(subjectFilter.toLowerCase());
     const matchesSearch =
       exam.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -749,14 +695,15 @@ export const ProctoringReviewPage: React.FC = () => {
               {/* Left 2 Cols: Live Video Stream & Live Audio */}
               <div className="lg:col-span-2 space-y-4">
                 <div className="relative aspect-video rounded-2xl bg-slate-950 overflow-hidden border-2 border-rose-500 shadow-xl flex items-center justify-center">
-                  <video
-                    autoPlay
-                    loop
-                    muted={!isLiveAudioListening}
-                    playsInline
-                    src="https://assets.mixkit.co/videos/preview/mixkit-young-man-studying-with-his-laptop-and-notepad-42881-large.mp4"
-                    className="w-full h-full object-cover"
-                  />
+                  <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 bg-slate-900">
+                    <Camera className="w-10 h-10 mb-2 opacity-50" />
+                    <span className="font-mono text-xs font-bold uppercase tracking-widest text-slate-500">
+                      Encrypted Live Feed
+                    </span>
+                    <span className="font-mono text-[10px] text-slate-600 mt-1">
+                      Awaiting video packets from client...
+                    </span>
+                  </div>
 
                   {/* Top Live Video HUD Overlay */}
                   <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
@@ -1061,12 +1008,19 @@ export const ProctoringReviewPage: React.FC = () => {
             {activeRecordedTab === 'room_scan' && (
               <div className="space-y-4 pt-2">
                 <div className="relative aspect-video rounded-2xl bg-slate-950 overflow-hidden border border-slate-200 shadow-md flex items-center justify-center">
-                  <video
-                    ref={roomScanVideoRef}
-                    onTimeUpdate={handleRoomScanTimeUpdate}
-                    src={evidenceSummary?.roomScanVideo?.filePath || 'https://assets.mixkit.co/videos/preview/mixkit-hands-of-a-student-taking-notes-on-a-notebook-42880-large.mp4'}
-                    className="w-full h-full object-cover"
-                  />
+                  {evidenceSummary?.roomScanVideo?.filePath ? (
+                    <video
+                      ref={roomScanVideoRef}
+                      onTimeUpdate={handleRoomScanTimeUpdate}
+                      src={evidenceSummary.roomScanVideo.filePath}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 bg-slate-900">
+                      <Video className="w-8 h-8 mb-2 opacity-50" />
+                      <span className="font-mono text-xs uppercase">No Recording Found</span>
+                    </div>
+                  )}
                   <div className="absolute top-3 left-3 px-3 py-1 rounded-lg bg-slate-950/80 backdrop-blur text-white text-xs font-mono flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-emerald-400" />
                     <span>360° ROOM SCAN RECORDING (300° VERIFIED)</span>
@@ -1105,12 +1059,19 @@ export const ProctoringReviewPage: React.FC = () => {
             {activeRecordedTab === 'camera' && (
               <div className="space-y-4 pt-2">
                 <div className="relative aspect-video rounded-2xl bg-slate-950 overflow-hidden border border-slate-200 shadow-md flex items-center justify-center">
-                  <video
-                    ref={webcamVideoRef}
-                    onTimeUpdate={handleWebcamTimeUpdate}
-                    src={evidenceSummary?.webcamVideo?.filePath || 'https://assets.mixkit.co/videos/preview/mixkit-young-man-studying-with-his-laptop-and-notepad-42881-large.mp4'}
-                    className="w-full h-full object-cover"
-                  />
+                  {evidenceSummary?.webcamVideo?.filePath ? (
+                    <video
+                      ref={webcamVideoRef}
+                      onTimeUpdate={handleWebcamTimeUpdate}
+                      src={evidenceSummary.webcamVideo.filePath}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 bg-slate-900">
+                      <Camera className="w-8 h-8 mb-2 opacity-50" />
+                      <span className="font-mono text-xs uppercase">No Recording Found</span>
+                    </div>
+                  )}
                   <div className="absolute top-3 left-3 px-3 py-1 rounded-lg bg-slate-950/80 backdrop-blur text-white text-xs font-mono flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-emerald-400" />
                     <span>RECORDED WEBCAM PROCTORING STREAM</span>

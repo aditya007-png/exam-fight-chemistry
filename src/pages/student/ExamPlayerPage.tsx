@@ -10,7 +10,7 @@ import { ProctoringCornerWidget } from '../../components/exam/ProctoringCornerWi
 import { ProctoringCheckScreen } from '../../components/exam/ProctoringCheckScreen';
 import { RoomScanExperience } from '../../components/exam/RoomScanExperience';
 import { Button } from '../../components/common/Button';
-import { MOCK_EXAM_QUESTIONS, MOCK_SAVED_SUBMISSIONS } from '../../lib/mockExamData';
+
 import {
   getExamById,
   getExamQuestions,
@@ -51,14 +51,11 @@ export const ExamPlayerPage: React.FC = () => {
   const { examId } = useParams<{ examId: string }>();
   const { user } = useAuth();
 
-  const activeExamId = examId || 'exam-act-001';
+  const activeExamId = examId || '';
   const storedExam = getExamById(activeExamId);
   const storedQuestions = getExamQuestions(activeExamId);
 
-  const questions: ExamQuestion[] =
-    storedQuestions.length > 0
-      ? (storedQuestions as any)
-      : MOCK_EXAM_QUESTIONS[activeExamId] || MOCK_EXAM_QUESTIONS['exam-act-001'];
+  const questions: ExamQuestion[] = storedQuestions as any;
 
   // Current Step in Student Flow
   const [currentStep, setCurrentStep] = useState<ExamStep>('instructions');
@@ -86,7 +83,7 @@ export const ExamPlayerPage: React.FC = () => {
 
     const now = new Date();
     const formattedTime = now.toLocaleTimeString();
-    const attemptId = `att-${user?.id || 'demo'}-${Date.now().toString().slice(-4)}`;
+    const attemptId = `att-${user?.id || 'std'}-${Date.now().toString().slice(-4)}`;
 
     setTerminationInfo({
       reason,
@@ -137,14 +134,14 @@ export const ExamPlayerPage: React.FC = () => {
     durationSeconds: number;
     videoBlob: Blob;
   }) => {
-    const attemptId = `att-${user?.id || 'demo'}`;
+    const attemptId = `att-${user?.id || 'std'}-${Date.now().toString().slice(-4)}`;
 
     // 1. Upload room scan evidence with coverage degrees
     await uploadRoomScanVideo({
       examId: activeExamId,
       attemptId,
-      studentId: user?.id || 'demo-student-001',
-      studentName: user?.full_name || 'Alex Chen',
+      studentId: user?.id || 'unknown-student',
+      studentName: user?.full_name || 'Unknown Student',
       videoBlob: data.videoBlob,
       durationSeconds: data.durationSeconds,
       coverageDegrees: data.coverageDegrees,
@@ -394,7 +391,6 @@ export const ExamPlayerPage: React.FC = () => {
       createdAt: new Date().toISOString(),
     } as any);
 
-    MOCK_SAVED_SUBMISSIONS[submissionId] = resultObj;
     setSubmissionResult(resultObj);
     setCurrentStep('submitted');
   };
@@ -936,8 +932,6 @@ export const ExamPlayerPage: React.FC = () => {
         proctoringState={proctoring.proctoringState}
         onEnterFullscreen={() => proctoring.enterFullscreen()}
         onRetryHardware={() => proctoring.startContinuousProctoringMedia()}
-        onSelectTestScenario={proctoring.setOverrideScenario}
-        activeScenario={proctoring.overrideScenario}
       />
 
       {/* 4. ONLY CALCULATOR IN EXAM TOOLS */}
