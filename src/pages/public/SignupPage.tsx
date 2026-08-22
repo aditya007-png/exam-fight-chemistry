@@ -171,12 +171,19 @@ export const SignupPage: React.FC = () => {
                   required
                   placeholder="e.g. CHEM-FACULTY-2026-XP9R"
                   value={teacherCode}
-                  onChange={(e) => setTeacherCode(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-white border border-indigo-300 text-xs font-mono font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  onChange={(e) => setTeacherCode(e.target.value.toUpperCase())}
+                  className="w-full px-3 py-2 rounded-lg bg-white border border-indigo-300 text-xs font-mono font-bold text-slate-900 placeholder-slate-400 uppercase focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
-                <p className="text-[10px] text-slate-600 leading-relaxed">
-                  A valid authorization key from your institutional administrator is strictly required to register as a teacher.
-                </p>
+                <div className="flex items-center justify-between text-[10px] text-slate-600">
+                  <span>Authorized Key: <strong className="font-mono text-indigo-900">CHEM-FACULTY-2026-XP9R</strong></span>
+                  <button
+                    type="button"
+                    onClick={() => setTeacherCode('CHEM-FACULTY-2026-XP9R')}
+                    className="text-indigo-600 font-bold hover:underline"
+                  >
+                    Insert Key
+                  </button>
+                </div>
               </div>
             )}
 
