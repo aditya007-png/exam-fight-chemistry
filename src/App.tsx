@@ -18,6 +18,7 @@ import { ProfilePage } from './pages/common/ProfilePage';
 
 // Student Pages
 import { StudentDashboard } from './pages/student/StudentDashboard';
+import { StudentClassesPage } from './pages/student/StudentClassesPage';
 import { StudentExamsPage } from './pages/student/StudentExamsPage';
 import { ExamPlayerPage } from './pages/student/ExamPlayerPage';
 import { PeriodicTablePage } from './pages/student/PeriodicTablePage';
@@ -26,6 +27,7 @@ import { ExamResultDetailPage } from './pages/student/ExamResultDetailPage';
 
 // Teacher Pages
 import { TeacherDashboard } from './pages/teacher/TeacherDashboard';
+import { TeacherClassesPage } from './pages/teacher/TeacherClassesPage';
 import { ExamBuilderPage } from './pages/teacher/ExamBuilderPage';
 import { TeacherExamsPage } from './pages/teacher/TeacherExamsPage';
 import { TeacherStudentsPage } from './pages/teacher/TeacherStudentsPage';
@@ -34,6 +36,7 @@ import { ProctoringReviewPage } from './pages/teacher/ProctoringReviewPage';
 
 // Admin Pages
 import { AdminDashboard } from './pages/admin/AdminDashboard';
+import { AdminClassesPage } from './pages/admin/AdminClassesPage';
 import { AdminUsersPage } from './pages/admin/AdminUsersPage';
 import { AdminTeachersPage } from './pages/admin/AdminTeachersPage';
 import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
@@ -92,6 +95,18 @@ export const App: React.FC = () => {
                 <RoleGuard allowedRoles={['student']}>
                   <DashboardLayout>
                     <StudentDashboard />
+                  </DashboardLayout>
+                </RoleGuard>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/classes"
+            element={
+              <ProtectedRoute>
+                <RoleGuard allowedRoles={['student']}>
+                  <DashboardLayout>
+                    <StudentClassesPage />
                   </DashboardLayout>
                 </RoleGuard>
               </ProtectedRoute>
@@ -182,6 +197,18 @@ export const App: React.FC = () => {
                 <RoleGuard allowedRoles={['teacher']}>
                   <DashboardLayout>
                     <TeacherDashboard />
+                  </DashboardLayout>
+                </RoleGuard>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teacher/classes"
+            element={
+              <ProtectedRoute>
+                <RoleGuard allowedRoles={['teacher']}>
+                  <DashboardLayout>
+                    <TeacherClassesPage />
                   </DashboardLayout>
                 </RoleGuard>
               </ProtectedRoute>
@@ -282,6 +309,18 @@ export const App: React.FC = () => {
                 <RoleGuard allowedRoles={['admin']}>
                   <DashboardLayout>
                     <AdminDashboard />
+                  </DashboardLayout>
+                </RoleGuard>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/classes"
+            element={
+              <ProtectedRoute>
+                <RoleGuard allowedRoles={['admin']}>
+                  <DashboardLayout>
+                    <AdminClassesPage />
                   </DashboardLayout>
                 </RoleGuard>
               </ProtectedRoute>

@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getStoredExams, getAttemptsForStudent } from '../../lib/examService';
+import { getExamsForStudent, getAttemptsForStudent } from '../../lib/examService';
+import { getStudentEnrolledSectionIds, getStudentEnrolledClasses } from '../../lib/classService';
 import { ExamItem } from '../../types/dashboard';
 import { ExamAttempt } from '../../types/evidence';
 import { DashboardCard } from '../../components/common/DashboardCard';
@@ -15,20 +16,30 @@ import {
   ShieldCheck,
   ArrowRight,
   Atom,
+  GraduationCap,
 } from 'lucide-react';
 
 export const StudentDashboard: React.FC = () => {
   const { user } = useAuth();
   const [exams, setExams] = useState<ExamItem[]>([]);
   const [attempts, setAttempts] = useState<ExamAttempt[]>([]);
+  const [enrolledClassesCount, setEnrolledClassesCount] = useState<number>(0);
 
   useEffect(() => {
-    const loadedExams = getStoredExams();
-    setExams(loadedExams);
+    if (user?.id) {
+      const secIds = getStudentEnrolledSectionIds(user.id);
+      const studentExams = getExamsForStudent(secIds);
+      setExams(studentExams);
+      const enr = getStudentEnrolledClasses(user.id);
+      setEnrolledClassesCount(enr.length);
+    } else {
+      setExams([]);
+    }
+
     if (user?.email) {
       setAttempts(getAttemptsForStudent(user.email));
     }
-  }, [user?.email]);
+  }, [user?.id, user?.email]);
 
   const completedAttempts = attempts.filter((a) => a.status === 'submitted');
   const avgIntegrity =
@@ -51,17 +62,24 @@ export const StudentDashboard: React.FC = () => {
             Welcome back, {user?.full_name || 'Student'} 👋
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            {exams.length > 0
-              ? `You have ${exams.length} active chemistry examination(s) available.`
-              : 'No examinations are scheduled right now.'}
+            {enrolledClassesCount > 0
+              ? `You are enrolled in ${enrolledClassesCount} class cohort(s) with ${exams.length} assigned examination(s).`
+              : 'Join a class using your teacher’s enrollment key to access assigned exams.'}
           </p>
         </div>
 
-        <Link to="/student/exams">
-          <Button variant="primary" size="md" rightIcon={<ArrowRight className="w-4 h-4" />}>
-            View Assigned Exams
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link to="/student/classes">
+            <Button variant="secondary" size="md" leftIcon={<GraduationCap className="w-4 h-4" />}>
+              My Classes
+            </Button>
+          </Link>
+          <Link to="/student/exams">
+            <Button variant="primary" size="md" rightIcon={<ArrowRight className="w-4 h-4" />}>
+              Assigned Exams
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* 2. Real Stat Cards */}

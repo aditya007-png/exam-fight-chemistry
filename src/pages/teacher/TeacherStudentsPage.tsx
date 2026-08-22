@@ -176,7 +176,7 @@ export const TeacherStudentsPage: React.FC = () => {
                         <span>Edit Name</span>
                       </button>
 
-                      <Link to={`/teacher/evidence-review?attempt=att-001`}>
+                      <Link to="/teacher/evidence-review">
                         <Button
                           variant="secondary"
                           size="sm"

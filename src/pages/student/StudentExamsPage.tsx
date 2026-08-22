@@ -1,18 +1,24 @@
-// src/pages/student/StudentExamsPage.tsx
-// Student Examinations List using real persistent exam data
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getStoredExams } from '../../lib/examService';
+import { useAuth } from '../../context/AuthContext';
+import { getExamsForStudent } from '../../lib/examService';
+import { getStudentEnrolledSectionIds } from '../../lib/classService';
 import { ExamItem } from '../../types/dashboard';
 import { Button } from '../../components/common/Button';
 import { FileText, Clock, Calendar, ShieldCheck, ArrowRight } from 'lucide-react';
 
 export const StudentExamsPage: React.FC = () => {
+  const { user } = useAuth();
   const [exams, setExams] = useState<ExamItem[]>([]);
 
   useEffect(() => {
-    setExams(getStoredExams());
-  }, []);
+    if (user?.id) {
+      const secIds = getStudentEnrolledSectionIds(user.id);
+      setExams(getExamsForStudent(secIds));
+    } else {
+      setExams([]);
+    }
+  }, [user?.id]);
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto py-2">
@@ -44,9 +50,21 @@ export const StudentExamsPage: React.FC = () => {
             >
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded border border-blue-200">
-                    {exam.courseCode}
-                  </span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-xs font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                      {exam.courseCode}
+                    </span>
+                    {exam.className && (
+                      <span className="text-[11px] font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
+                        {exam.className}
+                      </span>
+                    )}
+                    {exam.sectionName && (
+                      <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
+                        {exam.sectionName}
+                      </span>
+                    )}
+                  </div>
                   <span
                     className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
                       exam.status === 'active'

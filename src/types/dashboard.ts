@@ -17,6 +17,11 @@ export interface ExamItem {
   studentScore?: number;
   studentGrade?: string;
   proctoringActive?: boolean;
+  classId?: string;
+  className?: string;
+  sectionId?: string;
+  sectionName?: string;
+  teacherId?: string;
 }
 
 export interface RecentResult {

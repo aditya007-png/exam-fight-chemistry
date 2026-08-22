@@ -5,8 +5,8 @@
 //   Step 3: Review & Arrange
 //   Step 4: Publish
 
-import React, { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
 import { ChemQuestionEditor } from '../../components/teacher/ChemQuestionEditor';
@@ -38,9 +38,14 @@ const TOPICS: ChemTopic[] = [
 ];
 const DIFFICULTIES: QuestionDifficulty[] = ['Easy', 'Medium', 'Hard'];
 
+import { useAuth } from '../../context/AuthContext';
+import { getStoredClasses, getStoredSections } from '../../lib/classService';
+import { AcademicClass, AcademicSection } from '../../types/academic';
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export const ExamBuilderPage: React.FC = () => {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
 
@@ -48,8 +53,38 @@ export const ExamBuilderPage: React.FC = () => {
   const [examName, setExamName] = useState('Organic Chemistry — Unit Test');
   const [courseCode, setCourseCode] = useState('CHEM-302');
   const [durationMinutes, setDurationMinutes] = useState(60);
-  const [className, setClassName] = useState('12-A');
   const [subject, setSubject] = useState('Organic Chemistry');
+
+  // Class & Section Selection State
+  const [availableClasses, setAvailableClasses] = useState<AcademicClass[]>([]);
+  const [selectedClassId, setSelectedClassId] = useState<string>('');
+  const [availableSections, setAvailableSections] = useState<AcademicSection[]>([]);
+  const [selectedSectionId, setSelectedSectionId] = useState<string>('');
+
+  useEffect(() => {
+    const cls = getStoredClasses(user?.id);
+    setAvailableClasses(cls);
+    if (cls.length > 0) {
+      setSelectedClassId(cls[0].id);
+      setCourseCode(cls[0].classCode);
+      const secs = getStoredSections(cls[0].id);
+      setAvailableSections(secs);
+      if (secs.length > 0) {
+        setSelectedSectionId(secs[0].id);
+      }
+    }
+  }, [user?.id]);
+
+  const handleClassChange = (clsId: string) => {
+    setSelectedClassId(clsId);
+    const cls = availableClasses.find((c) => c.id === clsId);
+    if (cls) {
+      setCourseCode(cls.classCode);
+    }
+    const secs = getStoredSections(clsId);
+    setAvailableSections(secs);
+    setSelectedSectionId(secs.length > 0 ? secs[0].id : '');
+  };
 
   // ── Question bank for this exam ───────────────────────────────────────────
   const [questions, setQuestions] = useState<ChemQuestion[]>([]);
@@ -127,20 +162,27 @@ export const ExamBuilderPage: React.FC = () => {
 
   // ── Publish ───────────────────────────────────────────────────────────────
   const handlePublish = () => {
+    const selectedClassObj = availableClasses.find((c) => c.id === selectedClassId);
+    const selectedSectionObj = availableSections.find((s) => s.id === selectedSectionId);
+
     createOrUpdateExam(
       {
         title: examName,
         courseCode,
         durationMinutes,
-        className,
+        className: selectedClassObj?.name || 'All Cohorts',
+        classId: selectedClassId || undefined,
+        sectionId: selectedSectionId || undefined,
+        sectionName: selectedSectionObj?.name || 'All Sections',
         topic: subject,
-        teacherName: 'Faculty Instructor',
+        teacherId: user?.id,
+        teacherName: user?.full_name || 'Faculty Instructor',
         status: 'active',
       },
       questions
     );
 
-    alert(`✅ Examination "${examName}" published with ${questions.length} questions (${questions.reduce((s, q) => s + q.marks, 0)} total marks).`);
+    alert(`✅ Examination "${examName}" published and assigned to ${selectedClassObj?.name || 'Class'} (${selectedSectionObj?.name || 'All Sections'}).`);
     navigate('/teacher/exams');
   };
 
@@ -165,7 +207,7 @@ export const ExamBuilderPage: React.FC = () => {
             Chemistry Examination Builder
           </div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Create Examination</h1>
-          <p className="text-xs text-slate-500 mt-0.5">Build your chemistry exam step by step.</p>
+          <p className="text-xs text-slate-500 mt-0.5">Build your chemistry exam and assign it to your class sections.</p>
         </div>
       </div>
 
@@ -201,7 +243,7 @@ export const ExamBuilderPage: React.FC = () => {
       {/* ── STEP 1: Exam Details ── */}
       {step === 1 && (
         <div className="rounded-2xl bg-white border border-slate-200 p-6 shadow-card space-y-5">
-          <h2 className="text-base font-bold text-slate-900">Examination Details</h2>
+          <h2 className="text-base font-bold text-slate-900">Examination & Section Assignment Details</h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
@@ -214,6 +256,51 @@ export const ExamBuilderPage: React.FC = () => {
                 placeholder="e.g. Organic Chemistry — Unit Test"
               />
             </div>
+
+            {/* Target Class Selection */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Target Class *</label>
+              {availableClasses.length > 0 ? (
+                <select
+                  value={selectedClassId}
+                  onChange={(e) => handleClassChange(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium"
+                >
+                  {availableClasses.map((cls) => (
+                    <option key={cls.id} value={cls.id}>
+                      {cls.name} ({cls.classCode})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <Link to="/teacher/classes" className="text-xs text-blue-600 font-semibold hover:underline block pt-2">
+                  + Create a class first in Classes page
+                </Link>
+              )}
+            </div>
+
+            {/* Target Section Selection */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Target Section *</label>
+              {availableSections.length > 0 ? (
+                <select
+                  value={selectedSectionId}
+                  onChange={(e) => setSelectedSectionId(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-medium"
+                >
+                  {availableSections.map((sec) => (
+                    <option key={sec.id} value={sec.id}>
+                      {sec.name} (Code: {sec.enrollmentCode})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="text-xs text-slate-400 pt-2">
+                  No sections available for selected class.
+                </div>
+              )}
+            </div>
+
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">Course Code *</label>
               <input
@@ -224,18 +311,9 @@ export const ExamBuilderPage: React.FC = () => {
                 placeholder="e.g. CHEM-302"
               />
             </div>
+
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Class / Batch</label>
-              <input
-                type="text"
-                value={className}
-                onChange={(e) => setClassName(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                placeholder="e.g. 12-A"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Subject</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Subject Topic</label>
               <select
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
@@ -244,7 +322,8 @@ export const ExamBuilderPage: React.FC = () => {
                 {TOPICS.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
-            <div>
+
+            <div className="sm:col-span-2">
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">Duration (Minutes) *</label>
               <div className="relative">
                 <Clock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -520,7 +599,9 @@ export const ExamBuilderPage: React.FC = () => {
           </div>
           <div>
             <h2 className="text-xl font-extrabold text-slate-900 mb-1">{examName}</h2>
-            <p className="text-sm text-slate-500">{courseCode} • Class {className} • {durationMinutes} minutes</p>
+            <p className="text-sm text-slate-500">
+              {courseCode} • {availableClasses.find((c) => c.id === selectedClassId)?.name || 'Class'} ({availableSections.find((s) => s.id === selectedSectionId)?.name || 'Section'}) • {durationMinutes} minutes
+            </p>
           </div>
 
           <div className="grid grid-cols-3 gap-4 max-w-sm mx-auto text-center text-sm">

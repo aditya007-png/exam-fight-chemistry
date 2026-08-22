@@ -1,34 +1,36 @@
-// src/pages/admin/AdminDashboard.tsx
-// Real Institutional Administration Dashboard with dynamic statistics calculation
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getStudents, getTeachers } from '../../lib/userService';
-import { getStoredExams } from '../../lib/examService';
-import { getStoredComplaints } from '../../lib/supportService';
+import { getStoredExams, getAllStoredAttempts } from '../../lib/examService';
+import { getStoredClasses, getStoredSections } from '../../lib/classService';
 import { DashboardCard } from '../../components/common/DashboardCard';
 import { Button } from '../../components/common/Button';
 import {
   Users,
   GraduationCap,
   FileText,
-  LifeBuoy,
   Plus,
   ArrowRight,
+  BookOpen,
+  Layers,
+  Award,
 } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
   const [studentCount, setStudentCount] = useState(0);
   const [teacherCount, setTeacherCount] = useState(0);
+  const [classCount, setClassCount] = useState(0);
+  const [sectionCount, setSectionCount] = useState(0);
   const [examCount, setExamCount] = useState(0);
-  const [openComplaintsCount, setOpenComplaintsCount] = useState(0);
+  const [attemptCount, setAttemptCount] = useState(0);
 
   useEffect(() => {
     setStudentCount(getStudents().length);
     setTeacherCount(getTeachers().length);
+    setClassCount(getStoredClasses().length);
+    setSectionCount(getStoredSections().length);
     setExamCount(getStoredExams().length);
-    setOpenComplaintsCount(
-      getStoredComplaints().filter((c) => c.status === 'Open').length
-    );
+    setAttemptCount(getAllStoredAttempts().length);
   }, []);
 
   return (
@@ -39,7 +41,7 @@ export const AdminDashboard: React.FC = () => {
             Institutional Administration
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Platform governance, user provisioning, exam oversight, and student complaints management.
+            Platform governance, class cohorts, user provisioning, exam oversight, and student complaints management.
           </p>
         </div>
 
@@ -50,34 +52,48 @@ export const AdminDashboard: React.FC = () => {
         </Link>
       </div>
 
-      {/* 4 Real Dynamically Computed Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Real Dynamically Computed Stat Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
         <DashboardCard
-          title="Total Students"
+          title="Students"
           value={studentCount.toString().padStart(2, '0')}
           subtitle="Enrolled candidates"
           icon={Users}
           accentColor="blue"
         />
         <DashboardCard
-          title="Verified Teachers"
+          title="Teachers"
           value={teacherCount.toString().padStart(2, '0')}
-          subtitle="Faculty members"
+          subtitle="Verified faculty"
           icon={GraduationCap}
           accentColor="indigo"
         />
         <DashboardCard
-          title="Active Exams"
+          title="Classes"
+          value={classCount.toString().padStart(2, '0')}
+          subtitle="Academic courses"
+          icon={BookOpen}
+          accentColor="cyan"
+        />
+        <DashboardCard
+          title="Sections"
+          value={sectionCount.toString().padStart(2, '0')}
+          subtitle="Class cohorts"
+          icon={Layers}
+          accentColor="indigo"
+        />
+        <DashboardCard
+          title="Exams"
           value={examCount.toString().padStart(2, '0')}
-          subtitle="All created exams"
+          subtitle="Created exams"
           icon={FileText}
           accentColor="emerald"
         />
         <DashboardCard
-          title="Open Complaints"
-          value={openComplaintsCount.toString().padStart(2, '0')}
-          subtitle="Pending admin resolution"
-          icon={LifeBuoy}
+          title="Attempts"
+          value={attemptCount.toString().padStart(2, '0')}
+          subtitle="Student submissions"
+          icon={Award}
           accentColor="amber"
         />
       </div>

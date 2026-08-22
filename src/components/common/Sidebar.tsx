@@ -5,18 +5,18 @@ import { ContactSupportModal } from './ContactSupportModal';
 import {
   LayoutDashboard,
   FileText,
-  PlusCircle,
   Users,
   ShieldCheck,
   Award,
   User,
   Settings,
-  Headphones,
-  FlaskConical,
-  GraduationCap,
   Inbox,
   Atom,
   LifeBuoy,
+  BookOpen,
+  Headphones,
+  FlaskConical,
+  GraduationCap,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -34,10 +34,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     if (role === 'teacher') {
       return [
         { label: 'Dashboard', path: '/teacher/dashboard', icon: LayoutDashboard },
-        { label: 'Requests', path: '/teacher/requests', icon: Inbox },
-        { label: 'Create Exam', path: '/teacher/create-exam', icon: PlusCircle },
-        { label: 'My Exams', path: '/teacher/exams', icon: FileText },
+        { label: 'Classes', path: '/teacher/classes', icon: GraduationCap },
         { label: 'Students', path: '/teacher/students', icon: Users },
+        { label: 'Exams', path: '/teacher/exams', icon: FileText },
+        { label: 'Requests', path: '/teacher/requests', icon: Inbox },
         { label: 'Evidence Review', path: '/teacher/evidence-review', icon: ShieldCheck },
         { label: 'Profile', path: '/teacher/profile', icon: User },
       ];
@@ -46,8 +46,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     if (role === 'admin') {
       return [
         { label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
-        { label: 'Users', path: '/admin/users', icon: Users },
+        { label: 'Classes', path: '/admin/classes', icon: BookOpen },
         { label: 'Teachers', path: '/admin/teachers', icon: GraduationCap },
+        { label: 'Users', path: '/admin/users', icon: Users },
         { label: 'Complaints', path: '/admin/complaints', icon: LifeBuoy },
         { label: 'Settings', path: '/admin/settings', icon: Settings },
       ];
@@ -55,7 +56,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
     // Student role (default)
     return [
-      { label: 'Dashboard', path: '/student/dashboard', icon: LayoutDashboard },
+      { label: 'Home', path: '/student/dashboard', icon: LayoutDashboard },
+      { label: 'My Classes', path: '/student/classes', icon: GraduationCap },
       { label: 'My Exams', path: '/student/exams', icon: FileText },
       { label: 'Periodic Table', path: '/student/periodic-table', icon: Atom },
       { label: 'Results', path: '/student/results', icon: Award },

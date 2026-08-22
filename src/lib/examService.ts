@@ -56,6 +56,25 @@ export const saveExamQuestions = (examId: string, questions: ChemQuestion[]): vo
   }
 };
 
+export const getExamsForTeacher = (teacherId?: string): ExamItem[] => {
+  const exams = getStoredExams();
+  if (teacherId) {
+    return exams.filter((e) => !e.teacherId || e.teacherId === teacherId);
+  }
+  return exams;
+};
+
+export const getExamsForStudent = (enrolledSectionIds: string[]): ExamItem[] => {
+  const exams = getStoredExams();
+  // An exam is visible to a student if:
+  // 1. Its sectionId matches one of the student's enrolled sections
+  // 2. OR it was created without a section constraint
+  if (enrolledSectionIds.length === 0) {
+    return exams.filter((e) => !e.sectionId);
+  }
+  return exams.filter((e) => !e.sectionId || enrolledSectionIds.includes(e.sectionId));
+};
+
 export const createOrUpdateExam = (
   examData: {
     id?: string;
@@ -65,6 +84,10 @@ export const createOrUpdateExam = (
     topic?: string;
     className: string;
     teacherName?: string;
+    teacherId?: string;
+    classId?: string;
+    sectionId?: string;
+    sectionName?: string;
     durationMinutes: number;
     totalMarks?: number;
     status?: 'active' | 'scheduled' | 'completed' | 'draft';
@@ -84,8 +107,13 @@ export const createOrUpdateExam = (
     title: examData.title.trim(),
     topic: examData.topic || 'General Chemistry',
     courseCode: examData.courseCode.trim().toUpperCase(),
-    courseName: examData.courseName || `${examData.courseCode} — Class ${examData.className}`,
+    courseName: examData.courseName || `${examData.courseCode} — ${examData.className || 'Chemistry Class'}`,
     teacherName: examData.teacherName || 'Faculty Instructor',
+    teacherId: examData.teacherId,
+    classId: examData.classId,
+    className: examData.className,
+    sectionId: examData.sectionId,
+    sectionName: examData.sectionName,
     durationMinutes: examData.durationMinutes || 60,
     totalQuestions: questions.length,
     totalMarks,

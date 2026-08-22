@@ -45,6 +45,8 @@ export interface ExamAttempt {
   studentName: string;
   studentEmail: string;
   className?: string;
+  sectionId?: string;
+  sectionName?: string;
   status: ExamAttemptStatus;
   roomScanCompleted: boolean;
   startedAt: string | null;

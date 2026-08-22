@@ -4,29 +4,40 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { getStoredExams, getAllStoredAttempts } from '../../lib/examService';
+import { getStoredClasses, getStoredEnrollments } from '../../lib/classService';
 import { ExamItem } from '../../types/dashboard';
 import { ExamAttempt } from '../../types/evidence';
+import { AcademicClass } from '../../types/academic';
 import { DashboardCard } from '../../components/common/DashboardCard';
 import { Button } from '../../components/common/Button';
 import {
-  FileText,
   Radio,
   CheckCircle2,
   AlertTriangle,
   Plus,
   ArrowRight,
   Eye,
+  GraduationCap,
 } from 'lucide-react';
 
 export const TeacherDashboard: React.FC = () => {
   const { user } = useAuth();
+  const teacherId = user?.id || '';
   const [exams, setExams] = useState<ExamItem[]>([]);
   const [attempts, setAttempts] = useState<ExamAttempt[]>([]);
+  const [classes, setClasses] = useState<AcademicClass[]>([]);
+  const [enrolledStudentsCount, setEnrolledStudentsCount] = useState<number>(0);
 
   useEffect(() => {
-    setExams(getStoredExams());
+    setExams(getStoredExams().filter((e) => !e.teacherId || e.teacherId === teacherId));
     setAttempts(getAllStoredAttempts());
-  }, []);
+    if (teacherId) {
+      const clsList = getStoredClasses(teacherId);
+      setClasses(clsList);
+      const enrList = getStoredEnrollments({ teacherId });
+      setEnrolledStudentsCount(enrList.length);
+    }
+  }, [teacherId]);
 
   const activeExamsCount = exams.filter((e) => e.status === 'active').length;
   const completedAttempts = attempts.filter((a) => a.status === 'submitted');
@@ -41,11 +52,16 @@ export const TeacherDashboard: React.FC = () => {
             Welcome, {user?.full_name?.split(' ')[0] || 'Professor'}! 👋
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Overview of your active chemistry examinations, candidate attempts, and proctoring evidence.
+            Overview of your academic classes, enrolled students, active examinations, and proctoring evidence.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Link to="/teacher/classes">
+            <Button variant="secondary" size="sm" leftIcon={<GraduationCap className="w-4 h-4" />}>
+              Manage Classes
+            </Button>
+          </Link>
           <Link to="/teacher/create-exam">
             <Button variant="primary" size="sm" leftIcon={<Plus className="w-4 h-4" />}>
               Create Exam
@@ -57,10 +73,10 @@ export const TeacherDashboard: React.FC = () => {
       {/* 2. Real Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <DashboardCard
-          title="Total Exams"
-          value={exams.length.toString().padStart(2, '0')}
-          subtitle="All created exams"
-          icon={FileText}
+          title="My Classes"
+          value={classes.length.toString().padStart(2, '0')}
+          subtitle={`${enrolledStudentsCount} students enrolled`}
+          icon={GraduationCap}
           accentColor="blue"
         />
         <DashboardCard
@@ -73,7 +89,7 @@ export const TeacherDashboard: React.FC = () => {
         <DashboardCard
           title="Completed Attempts"
           value={completedAttempts.length.toString().padStart(2, '0')}
-          subtitle="Submitted candidate tests"
+          subtitle="Submitted tests"
           icon={CheckCircle2}
           accentColor="indigo"
         />
