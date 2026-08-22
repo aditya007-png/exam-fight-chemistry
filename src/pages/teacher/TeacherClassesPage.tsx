@@ -9,6 +9,7 @@ import {
 } from '../../types/academic';
 import {
   getStoredClasses,
+  fetchClassesFromDB,
   createClass,
   deleteClass,
   getStoredSections,
@@ -62,9 +63,17 @@ export const TeacherClassesPage: React.FC = () => {
   const [isCreateSectionOpen, setIsCreateSectionOpen] = useState(false);
   const [newSectionName, setNewSectionName] = useState('');
 
-  const loadData = () => {
-    const clsList = getStoredClasses(teacherId);
+  const loadData = async () => {
+    let clsList = getStoredClasses(teacherId);
     setClasses(clsList);
+
+    if (teacherId) {
+      const dbClasses = await fetchClassesFromDB(teacherId);
+      if (dbClasses.length > 0) {
+        clsList = dbClasses;
+        setClasses(dbClasses);
+      }
+    }
 
     if (clsList.length > 0) {
       const activeClsId = selectedClassId || clsList[0].id;
@@ -110,11 +119,11 @@ export const TeacherClassesPage: React.FC = () => {
     setEnrollments(getStoredEnrollments({ sectionId: secId }));
   };
 
-  const handleCreateClass = (e: React.FormEvent) => {
+  const handleCreateClass = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newClassName.trim() || !newClassCode.trim()) return;
 
-    const created = createClass(
+    const created = await createClass(
       teacherId,
       teacherName,
       newClassName,
@@ -128,23 +137,23 @@ export const TeacherClassesPage: React.FC = () => {
     setNewClassCode('');
     setNewDescription('');
     setSelectedClassId(created.id);
-    loadData();
+    await loadData();
 
     setSuccessToast(`Class "${created.name}" created successfully with Section A!`);
     setTimeout(() => setSuccessToast(null), 3500);
   };
 
-  const handleCreateSection = (e: React.FormEvent) => {
+  const handleCreateSection = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedClassId || !newSectionName.trim()) return;
 
     const cls = classes.find((c) => c.id === selectedClassId);
-    const createdSec = createSection(selectedClassId, cls?.name || 'Class', newSectionName);
+    const createdSec = await createSection(selectedClassId, cls?.name || 'Class', newSectionName);
 
     setIsCreateSectionOpen(false);
     setNewSectionName('');
     setSelectedSectionId(createdSec.id);
-    loadData();
+    await loadData();
 
     setSuccessToast(`Section "${createdSec.name}" created with code ${createdSec.enrollmentCode}!`);
     setTimeout(() => setSuccessToast(null), 3500);
@@ -165,12 +174,12 @@ export const TeacherClassesPage: React.FC = () => {
     }
   };
 
-  const handleDeleteClass = (clsId: string, name: string) => {
+  const handleDeleteClass = async (clsId: string, name: string) => {
     if (window.confirm(`Are you sure you want to delete class "${name}" and all its sections?`)) {
-      deleteClass(clsId);
+      await deleteClass(clsId);
       setSelectedClassId(null);
       setSelectedSectionId(null);
-      loadData();
+      await loadData();
       setSuccessToast(`Class "${name}" deleted.`);
       setTimeout(() => setSuccessToast(null), 3500);
     }

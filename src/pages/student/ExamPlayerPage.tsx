@@ -235,7 +235,7 @@ export const ExamPlayerPage: React.FC = () => {
   };
 
   // Handle Final Exam Submission
-  const handleFinalSubmit = () => {
+  const handleFinalSubmit = async () => {
     proctoring.cleanupProctoringMedia();
 
     let totalScore = 0;
@@ -342,9 +342,9 @@ export const ExamPlayerPage: React.FC = () => {
       createdAt: new Date().toISOString(),
     };
 
-    createOrUpdateAttempt(realAttempt);
+    await createOrUpdateAttempt(realAttempt);
 
-    saveAttemptEvidence(attemptId, {
+    await saveAttemptEvidence(attemptId, {
       id: `evi-${attemptId}`,
       attemptId,
       examId: activeExamId,

@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getStoredExams, getAllStoredAttempts } from '../../lib/examService';
-import { getStoredClasses, getStoredEnrollments } from '../../lib/classService';
+import { getStoredExams, getAllStoredAttempts, fetchExamsFromDB, fetchAttemptsFromDB } from '../../lib/examService';
+import { getStoredClasses, getStoredEnrollments, fetchClassesFromDB, fetchEnrollmentsFromDB } from '../../lib/classService';
 import { ExamItem } from '../../types/dashboard';
 import { ExamAttempt } from '../../types/evidence';
 import { AcademicClass } from '../../types/academic';
@@ -29,14 +29,23 @@ export const TeacherDashboard: React.FC = () => {
   const [enrolledStudentsCount, setEnrolledStudentsCount] = useState<number>(0);
 
   useEffect(() => {
-    setExams(getStoredExams().filter((e) => !e.teacherId || e.teacherId === teacherId));
-    setAttempts(getAllStoredAttempts());
-    if (teacherId) {
-      const clsList = getStoredClasses(teacherId);
-      setClasses(clsList);
-      const enrList = getStoredEnrollments({ teacherId });
-      setEnrolledStudentsCount(enrList.length);
-    }
+    const loadTeacherDashboard = async () => {
+      if (teacherId) {
+        await fetchClassesFromDB(teacherId);
+        await fetchEnrollmentsFromDB();
+        await fetchExamsFromDB(teacherId);
+        await fetchAttemptsFromDB();
+
+        setExams(getStoredExams().filter((e) => !e.teacherId || e.teacherId === teacherId));
+        setAttempts(getAllStoredAttempts());
+        const clsList = getStoredClasses(teacherId);
+        setClasses(clsList);
+        const enrList = getStoredEnrollments({ teacherId });
+        setEnrolledStudentsCount(enrList.length);
+      }
+    };
+
+    loadTeacherDashboard();
   }, [teacherId]);
 
   const activeExamsCount = exams.filter((e) => e.status === 'active').length;

@@ -8,8 +8,10 @@ import {
 } from '../../types/academic';
 import {
   getStoredClasses,
+  fetchClassesFromDB,
   getStoredSections,
   getStoredEnrollments,
+  fetchEnrollmentsFromDB,
 } from '../../lib/classService';
 import {
   BookOpen,
@@ -25,9 +27,15 @@ export const AdminClassesPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    setClasses(getStoredClasses());
-    setSections(getStoredSections());
-    setEnrollments(getStoredEnrollments());
+    const loadAdminClasses = async () => {
+      await fetchClassesFromDB();
+      await fetchEnrollmentsFromDB();
+      setClasses(getStoredClasses());
+      setSections(getStoredSections());
+      setEnrollments(getStoredEnrollments());
+    };
+
+    loadAdminClasses();
   }, []);
 
   const filteredClasses = classes.filter(

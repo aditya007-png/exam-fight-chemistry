@@ -9,6 +9,7 @@ import {
 } from '../../types/academic';
 import {
   getStudentEnrolledClasses,
+  fetchEnrollmentsFromDB,
   joinClassByCode,
 } from '../../lib/classService';
 import { getStoredExams } from '../../lib/examService';
@@ -46,9 +47,15 @@ export const StudentClassesPage: React.FC = () => {
   const [joinError, setJoinError] = useState<string | null>(null);
   const [joinSuccess, setJoinSuccess] = useState<string | null>(null);
 
-  const loadData = () => {
-    const list = getStudentEnrolledClasses(studentId, studentEmail);
+  const loadData = async () => {
+    let list = getStudentEnrolledClasses(studentId, studentEmail);
     setEnrolledClasses(list);
+
+    if (studentId) {
+      await fetchEnrollmentsFromDB(studentId);
+      list = getStudentEnrolledClasses(studentId, studentEmail);
+      setEnrolledClasses(list);
+    }
     setAllExams(getStoredExams());
   };
 
@@ -56,12 +63,12 @@ export const StudentClassesPage: React.FC = () => {
     loadData();
   }, [studentId, studentEmail]);
 
-  const handleJoinClass = (e: React.FormEvent) => {
+  const handleJoinClass = async (e: React.FormEvent) => {
     e.preventDefault();
     setJoinError(null);
     setJoinSuccess(null);
 
-    const result = joinClassByCode(
+    const result = await joinClassByCode(
       studentId,
       studentName,
       studentEmail,
@@ -71,7 +78,7 @@ export const StudentClassesPage: React.FC = () => {
     if (result.success) {
       setJoinSuccess(`Successfully joined ${result.className} — ${result.sectionName}!`);
       setEnrollmentCodeInput('');
-      loadData();
+      await loadData();
       setTimeout(() => {
         setIsJoinModalOpen(false);
         setJoinSuccess(null);

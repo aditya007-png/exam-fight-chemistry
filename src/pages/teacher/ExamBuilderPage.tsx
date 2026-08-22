@@ -161,11 +161,11 @@ export const ExamBuilderPage: React.FC = () => {
   };
 
   // ── Publish ───────────────────────────────────────────────────────────────
-  const handlePublish = () => {
+  const handlePublish = async () => {
     const selectedClassObj = availableClasses.find((c) => c.id === selectedClassId);
     const selectedSectionObj = availableSections.find((s) => s.id === selectedSectionId);
 
-    createOrUpdateExam(
+    await createOrUpdateExam(
       {
         title: examName,
         courseCode,

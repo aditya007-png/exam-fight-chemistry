@@ -4,6 +4,7 @@ import {
   getAllStoredAttempts,
   getAttemptById,
   createOrUpdateAttempt,
+  fetchAttemptsFromDB,
   getAttemptEvidence as getStoredAttemptEvidence,
   saveAttemptEvidence as saveStoredAttemptEvidence,
 } from './examService';
@@ -142,6 +143,7 @@ export async function getStudentAttemptEvidence(
  * Fetch all student attempts for Evidence Review list
  */
 export async function getExamAttemptsList(examId?: string): Promise<ExamAttempt[]> {
+  await fetchAttemptsFromDB();
   const all = getAllStoredAttempts();
   if (!examId || examId === 'all') return all;
   return all.filter((att) => att.examId === examId);

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getExamsForStudent } from '../../lib/examService';
-import { getStudentEnrolledSectionIds } from '../../lib/classService';
+import { getExamsForStudent, fetchExamsFromDB } from '../../lib/examService';
+import { getStudentEnrolledSectionIds, fetchEnrollmentsFromDB } from '../../lib/classService';
 import { ExamItem } from '../../types/dashboard';
 import { Button } from '../../components/common/Button';
 import { FileText, Clock, Calendar, ShieldCheck, ArrowRight } from 'lucide-react';
@@ -12,12 +12,18 @@ export const StudentExamsPage: React.FC = () => {
   const [exams, setExams] = useState<ExamItem[]>([]);
 
   useEffect(() => {
-    if (user?.id || user?.email) {
-      const secIds = getStudentEnrolledSectionIds(user?.id || '', user?.email || '');
-      setExams(getExamsForStudent(secIds));
-    } else {
-      setExams([]);
-    }
+    const loadStudentExams = async () => {
+      if (user?.id || user?.email) {
+        await fetchEnrollmentsFromDB(user?.id);
+        await fetchExamsFromDB();
+        const secIds = getStudentEnrolledSectionIds(user?.id || '', user?.email || '');
+        setExams(getExamsForStudent(secIds));
+      } else {
+        setExams([]);
+      }
+    };
+
+    loadStudentExams();
   }, [user?.id, user?.email]);
 
   return (

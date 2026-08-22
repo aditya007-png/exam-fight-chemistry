@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getStudents, getTeachers } from '../../lib/userService';
-import { getStoredExams, getAllStoredAttempts } from '../../lib/examService';
-import { getStoredClasses, getStoredSections } from '../../lib/classService';
+import { getStudents, getTeachers, fetchProfilesFromDB } from '../../lib/userService';
+import { getStoredExams, getAllStoredAttempts, fetchExamsFromDB, fetchAttemptsFromDB } from '../../lib/examService';
+import { getStoredClasses, getStoredSections, fetchClassesFromDB, fetchEnrollmentsFromDB } from '../../lib/classService';
 import { DashboardCard } from '../../components/common/DashboardCard';
 import { Button } from '../../components/common/Button';
 import {
@@ -25,12 +25,22 @@ export const AdminDashboard: React.FC = () => {
   const [attemptCount, setAttemptCount] = useState(0);
 
   useEffect(() => {
-    setStudentCount(getStudents().length);
-    setTeacherCount(getTeachers().length);
-    setClassCount(getStoredClasses().length);
-    setSectionCount(getStoredSections().length);
-    setExamCount(getStoredExams().length);
-    setAttemptCount(getAllStoredAttempts().length);
+    const loadAdminDashboard = async () => {
+      await fetchProfilesFromDB();
+      await fetchClassesFromDB();
+      await fetchEnrollmentsFromDB();
+      await fetchExamsFromDB();
+      await fetchAttemptsFromDB();
+
+      setStudentCount(getStudents().length);
+      setTeacherCount(getTeachers().length);
+      setClassCount(getStoredClasses().length);
+      setSectionCount(getStoredSections().length);
+      setExamCount(getStoredExams().length);
+      setAttemptCount(getAllStoredAttempts().length);
+    };
+
+    loadAdminDashboard();
   }, []);
 
   return (

@@ -3,10 +3,11 @@
 // Displays both Registered Faculty Members (with name editing) and Authorization Keys
 import React, { useState, useEffect } from 'react';
 import { UserProfile } from '../../types/auth';
-import { getTeachers, updateUserName, deleteUser } from '../../lib/userService';
-import { getStoredClasses } from '../../lib/classService';
+import { getTeachers, updateUserName, deleteUser, fetchProfilesFromDB } from '../../lib/userService';
+import { getStoredClasses, fetchClassesFromDB } from '../../lib/classService';
 import {
   getStoredTeacherCodes,
+  fetchTeacherCodesFromDB,
   generateTeacherCode,
   deleteTeacherCode,
   TeacherVerificationCode,
@@ -39,7 +40,10 @@ export const AdminTeachersPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const loadData = () => {
+  const loadData = async () => {
+    await fetchProfilesFromDB();
+    await fetchTeacherCodesFromDB();
+    await fetchClassesFromDB();
     setTeachers(getTeachers());
     setVerificationCodes(getStoredTeacherCodes());
   };
@@ -48,10 +52,10 @@ export const AdminTeachersPage: React.FC = () => {
     loadData();
   }, []);
 
-  const handleGenerate = (e: React.FormEvent) => {
+  const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newCode = generateTeacherCode(newFacultyEmail);
-    loadData();
+    const newCode = await generateTeacherCode(newFacultyEmail);
+    await loadData();
     setNewCodeSuccess(newCode.code);
   };
 
@@ -61,10 +65,10 @@ export const AdminTeachersPage: React.FC = () => {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleDeleteCode = (id: string, code: string) => {
+  const handleDeleteCode = async (id: string, code: string) => {
     if (window.confirm(`Are you sure you want to revoke teacher authorization code "${code}"?`)) {
-      deleteTeacherCode(id);
-      loadData();
+      await deleteTeacherCode(id);
+      await loadData();
     }
   };
 
@@ -73,21 +77,21 @@ export const AdminTeachersPage: React.FC = () => {
     setEditNameInput(t.full_name);
   };
 
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingTeacher || !editNameInput.trim()) return;
 
-    updateUserName(editingTeacher.id, editNameInput.trim());
-    loadData();
+    await updateUserName(editingTeacher.id, editNameInput.trim());
+    await loadData();
     setEditingTeacher(null);
     setSuccessMessage(`Successfully updated faculty name to "${editNameInput.trim()}".`);
     setTimeout(() => setSuccessMessage(null), 3500);
   };
 
-  const handleDeleteTeacher = (t: UserProfile) => {
+  const handleDeleteTeacher = async (t: UserProfile) => {
     if (window.confirm(`Are you sure you want to remove teacher ${t.full_name} (${t.email}) from the platform?`)) {
-      deleteUser(t.id);
-      loadData();
+      await deleteUser(t.id);
+      await loadData();
       setSuccessMessage(`Removed teacher: ${t.full_name}.`);
       setTimeout(() => setSuccessMessage(null), 3500);
     }

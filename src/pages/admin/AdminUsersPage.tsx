@@ -2,7 +2,7 @@
 // Complete User Directory Management for Admin (Edit names of teachers and students, remove users, add users)
 import React, { useState, useEffect } from 'react';
 import { UserProfile, UserRole } from '../../types/auth';
-import { getStoredUsers, updateUserName, deleteUser, createUser } from '../../lib/userService';
+import { getStoredUsers, updateUserName, deleteUser, createUser, fetchProfilesFromDB } from '../../lib/userService';
 import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
 import { Search, Edit3, Trash2, UserPlus, CheckCircle2, Shield } from 'lucide-react';
@@ -23,8 +23,9 @@ export const AdminUsersPage: React.FC = () => {
   const [addRole, setAddRole] = useState<UserRole>('student');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Load users from persistent storage
-  const loadUsers = () => {
+  // Load users from persistent storage & PostgreSQL DB
+  const loadUsers = async () => {
+    await fetchProfilesFromDB();
     setUsers(getStoredUsers());
   };
 
@@ -37,26 +38,26 @@ export const AdminUsersPage: React.FC = () => {
     setEditNameInput(user.full_name);
   };
 
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser || !editNameInput.trim()) return;
 
-    updateUserName(editingUser.id, editNameInput.trim());
-    loadUsers();
+    await updateUserName(editingUser.id, editNameInput.trim());
+    await loadUsers();
     setEditingUser(null);
     setSuccessMessage(`Updated name for ${editingUser.email} to "${editNameInput.trim()}".`);
     setTimeout(() => setSuccessMessage(null), 3500);
   };
 
-  const handleDelete = (user: UserProfile) => {
+  const handleDelete = async (user: UserProfile) => {
     if (user.role === 'admin' && users.filter((u) => u.role === 'admin').length <= 1) {
       alert('Cannot delete the primary Administrator account.');
       return;
     }
 
     if (window.confirm(`Are you sure you want to remove ${user.full_name} (${user.email})?`)) {
-      deleteUser(user.id);
-      loadUsers();
+      await deleteUser(user.id);
+      await loadUsers();
       setSuccessMessage(`Removed user: ${user.full_name}.`);
       setTimeout(() => setSuccessMessage(null), 3500);
     }

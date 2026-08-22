@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getExamsForStudent, getAttemptsForStudent } from '../../lib/examService';
-import { getStudentEnrolledSectionIds, getStudentEnrolledClasses } from '../../lib/classService';
+import { getExamsForStudent, getAttemptsForStudent, fetchExamsFromDB, fetchAttemptsFromDB } from '../../lib/examService';
+import { getStudentEnrolledSectionIds, getStudentEnrolledClasses, fetchEnrollmentsFromDB } from '../../lib/classService';
 import { ExamItem } from '../../types/dashboard';
 import { ExamAttempt } from '../../types/evidence';
 import { DashboardCard } from '../../components/common/DashboardCard';
@@ -26,19 +26,24 @@ export const StudentDashboard: React.FC = () => {
   const [enrolledClassesCount, setEnrolledClassesCount] = useState<number>(0);
 
   useEffect(() => {
-    if (user?.id || user?.email) {
-      const secIds = getStudentEnrolledSectionIds(user?.id || '', user?.email || '');
-      const studentExams = getExamsForStudent(secIds);
-      setExams(studentExams);
-      const enr = getStudentEnrolledClasses(user?.id || '', user?.email || '');
-      setEnrolledClassesCount(enr.length);
-    } else {
-      setExams([]);
-    }
+    const loadDashboard = async () => {
+      if (user?.id || user?.email) {
+        await fetchEnrollmentsFromDB(user?.id);
+        await fetchExamsFromDB();
+        await fetchAttemptsFromDB();
 
-    if (user?.email) {
-      setAttempts(getAttemptsForStudent(user.email));
-    }
+        const secIds = getStudentEnrolledSectionIds(user?.id || '', user?.email || '');
+        const studentExams = getExamsForStudent(secIds);
+        setExams(studentExams);
+        const enr = getStudentEnrolledClasses(user?.id || '', user?.email || '');
+        setEnrolledClassesCount(enr.length);
+        setAttempts(getAttemptsForStudent(user?.id || user?.email || ''));
+      } else {
+        setExams([]);
+      }
+    };
+
+    loadDashboard();
   }, [user?.id, user?.email]);
 
   const completedAttempts = attempts.filter((a) => a.status === 'submitted');

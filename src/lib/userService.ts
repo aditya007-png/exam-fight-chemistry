@@ -1,5 +1,6 @@
 // src/lib/userService.ts
-// Centralized persistent user management service for Admin and Teachers
+// Real PostgreSQL & Supabase Database User Directory Service
+import { supabase, isSupabaseConfigured } from './supabase';
 import { UserProfile, UserRole } from '../types/auth';
 
 const STORAGE_KEY = 'exam_fight_user_directory_v2';
@@ -13,7 +14,7 @@ export const DEFAULT_ADMIN: UserProfile = {
   updated_at: new Date().toISOString(),
 };
 
-// Retrieve all users from storage (or initialize with clean Admin)
+// Retrieve all users from storage
 export const getStoredUsers = (): UserProfile[] => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -35,6 +36,31 @@ export const getStoredUsers = (): UserProfile[] => {
   }
 };
 
+// Fetch real profiles from PostgreSQL database
+export const fetchProfilesFromDB = async (): Promise<UserProfile[]> => {
+  try {
+    if (isSupabaseConfigured()) {
+      const { data, error } = await supabase.from('profiles').select('*');
+      if (!error && data) {
+        const mapped: UserProfile[] = data.map((d: any) => ({
+          id: d.id,
+          email: d.email,
+          full_name: d.full_name,
+          role: d.role as UserRole,
+          avatar_url: d.avatar_url,
+          created_at: d.created_at,
+          updated_at: d.updated_at,
+        }));
+        saveStoredUsers(mapped);
+        return mapped;
+      }
+    }
+  } catch (err) {
+    console.warn('DB fetchProfiles error:', err);
+  }
+  return getStoredUsers();
+};
+
 // Save users to storage
 export const saveStoredUsers = (users: UserProfile[]): void => {
   try {
@@ -45,7 +71,18 @@ export const saveStoredUsers = (users: UserProfile[]): void => {
 };
 
 // Update name of any user (by Admin, Teacher, or self)
-export const updateUserName = (userId: string, newName: string): UserProfile | null => {
+export const updateUserName = async (userId: string, newName: string): Promise<UserProfile | null> => {
+  if (isSupabaseConfigured() && !userId.startsWith('user-')) {
+    try {
+      await supabase.from('profiles').update({
+        full_name: newName.trim(),
+        updated_at: new Date().toISOString(),
+      }).eq('id', userId);
+    } catch (err) {
+      console.warn('DB updateUserName error:', err);
+    }
+  }
+
   const users = getStoredUsers();
   const index = users.findIndex((u) => u.id === userId);
   if (index === -1) return null;
@@ -62,7 +99,15 @@ export const updateUserName = (userId: string, newName: string): UserProfile | n
 };
 
 // Delete a user (Admin capability)
-export const deleteUser = (userId: string): boolean => {
+export const deleteUser = async (userId: string): Promise<boolean> => {
+  if (isSupabaseConfigured() && !userId.startsWith('user-')) {
+    try {
+      await supabase.from('profiles').delete().eq('id', userId);
+    } catch (err) {
+      console.warn('DB deleteUser error:', err);
+    }
+  }
+
   const users = getStoredUsers();
   const filtered = users.filter((u) => u.id !== userId);
   if (filtered.length === users.length) return false;
