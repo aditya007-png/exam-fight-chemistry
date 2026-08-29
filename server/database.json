@@ -15,6 +15,14 @@
       "role": "teacher",
       "created_at": "2026-08-29T11:07:19.271Z",
       "updated_at": "2026-08-29T11:07:19.271Z"
+    },
+    {
+      "id": "user-1788001854966-auig",
+      "email": "aditya233@gmail.com",
+      "full_name": "ADITYA",
+      "role": "student",
+      "created_at": "2026-08-29T11:10:54.966Z",
+      "updated_at": "2026-08-29T11:10:54.966Z"
     }
   ],
   "teacherCodes": [
@@ -38,6 +46,42 @@
     }
   ],
   "classes": [
+    {
+      "id": "cls-1788002305410-h201",
+      "name": "B.Tech CSE - Chemistry for Engineers",
+      "code": "CSE-CHEM-2026",
+      "teacher_id": "teacher-step2-alok-1788002305383",
+      "teacher_name": "Prof. Alok Verma",
+      "academic_year": "2026-27",
+      "subject": "Chemistry",
+      "description": "",
+      "created_at": "2026-08-29T11:18:25.410Z",
+      "updated_at": "2026-08-29T11:18:25.410Z"
+    },
+    {
+      "id": "cls-1788002099867-qy74",
+      "name": "B.Tech CSE - Chemistry for Engineers",
+      "code": "CSE-CHEM-102",
+      "teacher_id": "teacher-step2-alok",
+      "teacher_name": "Prof. Alok Verma",
+      "academic_year": "2026-27",
+      "subject": "Chemistry",
+      "description": "",
+      "created_at": "2026-08-29T11:14:59.867Z",
+      "updated_at": "2026-08-29T11:14:59.867Z"
+    },
+    {
+      "id": "cls-1788002030650-0hea",
+      "name": "B.Tech CSE - Chemistry for Engineers",
+      "code": "CSE-CHEM-102",
+      "teacher_id": "teacher-step2-alok",
+      "teacher_name": "Prof. Alok Verma",
+      "academic_year": "2026-27",
+      "subject": "Chemistry",
+      "description": "",
+      "created_at": "2026-08-29T11:13:50.650Z",
+      "updated_at": "2026-08-29T11:13:50.650Z"
+    },
     {
       "id": "cls-1788001669870-5a9f",
       "name": "ADOP",
@@ -125,6 +169,33 @@
   ],
   "sections": [
     {
+      "id": "sec-cls-1788002305410-h201-a",
+      "class_id": "cls-1788002305410-h201",
+      "className": "B.Tech CSE - Chemistry for Engineers",
+      "name": "Section A",
+      "enrollment_code": "CSE--AVT89",
+      "created_at": "2026-08-29T11:18:25.410Z",
+      "updated_at": "2026-08-29T11:18:25.410Z"
+    },
+    {
+      "id": "sec-cls-1788002099867-qy74-a",
+      "class_id": "cls-1788002099867-qy74",
+      "className": "B.Tech CSE - Chemistry for Engineers",
+      "name": "Section A",
+      "enrollment_code": "CSE--AQFW7",
+      "created_at": "2026-08-29T11:14:59.867Z",
+      "updated_at": "2026-08-29T11:14:59.867Z"
+    },
+    {
+      "id": "sec-cls-1788002030650-0hea-a",
+      "class_id": "cls-1788002030650-0hea",
+      "className": "B.Tech CSE - Chemistry for Engineers",
+      "name": "Section A",
+      "enrollment_code": "CSE--A15XG",
+      "created_at": "2026-08-29T11:13:50.650Z",
+      "updated_at": "2026-08-29T11:13:50.650Z"
+    },
+    {
       "id": "sec-cls-1788001669870-5a9f-a",
       "class_id": "cls-1788001669870-5a9f",
       "className": "ADOP",
@@ -195,21 +266,174 @@
       "enrollment_code": "CSE--SJ7Y7",
       "created_at": "2026-08-29T11:05:21.877Z",
       "updated_at": "2026-08-29T11:05:21.877Z"
+    },
+    {
+      "id": "sec-1788002030657-o1cp",
+      "class_id": "cls-1788002030650-0hea",
+      "className": "B.Tech CSE - Chemistry for Engineers",
+      "name": "Section B",
+      "enrollment_code": "CSE--S3DBA",
+      "created_at": "2026-08-29T11:13:50.657Z",
+      "updated_at": "2026-08-29T11:13:50.657Z"
+    },
+    {
+      "id": "sec-1788002099874-21a2",
+      "class_id": "cls-1788002099867-qy74",
+      "className": "B.Tech CSE - Chemistry for Engineers",
+      "name": "Section B",
+      "enrollment_code": "CSE--SSA4A",
+      "created_at": "2026-08-29T11:14:59.874Z",
+      "updated_at": "2026-08-29T11:14:59.874Z"
+    },
+    {
+      "id": "sec-1788002305416-q7q1",
+      "class_id": "cls-1788002305410-h201",
+      "className": "B.Tech CSE - Chemistry for Engineers",
+      "name": "Section B",
+      "enrollment_code": "CSE--SILSP",
+      "created_at": "2026-08-29T11:18:25.416Z",
+      "updated_at": "2026-08-29T11:18:25.416Z"
     }
   ],
   "enrollments": [
     {
-      "id": "enr-1788001674926-twhi",
-      "studentId": "user-1788001352254-a73y",
+      "id": "enr-1788002305426-u8fd",
+      "studentId": "stu-step2-rohit-1788002305383",
+      "studentName": "Rohit Sharma",
+      "studentEmail": "rohit.step2.1788002305383@chem.edu",
+      "classId": "cls-1788002305410-h201",
+      "className": "B.Tech CSE - Chemistry for Engineers",
+      "sectionId": "sec-1788002305416-q7q1",
+      "sectionName": "Section B",
+      "teacherId": "teacher-step2-alok-1788002305383",
+      "teacherName": "AD",
+      "joinedAt": "2026-08-29T11:18:25.426Z",
+      "status": "active"
+    },
+    {
+      "id": "enr-1788002305423-y52j",
+      "studentId": "stu-step2-priya-1788002305383",
+      "studentName": "Priya Singh",
+      "studentEmail": "priya.step2.1788002305383@chem.edu",
+      "classId": "cls-1788002305410-h201",
+      "className": "B.Tech CSE - Chemistry for Engineers",
+      "sectionId": "sec-cls-1788002305410-h201-a",
+      "sectionName": "Section A",
+      "teacherId": "teacher-step2-alok-1788002305383",
+      "teacherName": "AD",
+      "joinedAt": "2026-08-29T11:18:25.423Z",
+      "status": "active"
+    },
+    {
+      "id": "enr-1788002305420-4cft",
+      "studentId": "stu-step2-aditya-1788002305383",
+      "studentName": "Aditya Kumar",
+      "studentEmail": "aditya.step2.1788002305383@chem.edu",
+      "classId": "cls-1788002305410-h201",
+      "className": "B.Tech CSE - Chemistry for Engineers",
+      "sectionId": "sec-cls-1788002305410-h201-a",
+      "sectionName": "Section A",
+      "teacherId": "teacher-step2-alok-1788002305383",
+      "teacherName": "AD",
+      "joinedAt": "2026-08-29T11:18:25.420Z",
+      "status": "active"
+    },
+    {
+      "id": "enr-1788002157417-pcm9",
+      "studentId": "user-1788001854966-auig",
       "studentName": "ADITYA",
-      "studentEmail": "aditya@gmail.con",
+      "studentEmail": "aditya233@gmail.com",
       "classId": "cls-1788001669870-5a9f",
       "className": "ADOP",
       "sectionId": "sec-cls-1788001669870-5a9f-a",
       "sectionName": "Section A",
       "teacherId": "user-1788001639271-y1t1",
       "teacherName": "AD",
-      "joinedAt": "2026-08-29T11:07:54.927Z",
+      "joinedAt": "2026-08-29T11:15:57.417Z",
+      "status": "active"
+    },
+    {
+      "id": "enr-1788002099885-eq4f",
+      "studentId": "stu-step2-rohit",
+      "studentName": "Rohit Sharma",
+      "studentEmail": "rohit.step2@chem.edu",
+      "classId": "cls-1788002099867-qy74",
+      "className": "B.Tech CSE - Chemistry for Engineers",
+      "sectionId": "sec-1788002099874-21a2",
+      "sectionName": "Section B",
+      "teacherId": "teacher-step2-alok",
+      "teacherName": "AD",
+      "joinedAt": "2026-08-29T11:14:59.885Z",
+      "status": "active"
+    },
+    {
+      "id": "enr-1788002099881-1xij",
+      "studentId": "stu-step2-priya",
+      "studentName": "Priya Singh",
+      "studentEmail": "priya.step2@chem.edu",
+      "classId": "cls-1788002099867-qy74",
+      "className": "B.Tech CSE - Chemistry for Engineers",
+      "sectionId": "sec-cls-1788002099867-qy74-a",
+      "sectionName": "Section A",
+      "teacherId": "teacher-step2-alok",
+      "teacherName": "AD",
+      "joinedAt": "2026-08-29T11:14:59.881Z",
+      "status": "active"
+    },
+    {
+      "id": "enr-1788002099878-f0g5",
+      "studentId": "stu-step2-aditya",
+      "studentName": "Aditya Kumar",
+      "studentEmail": "aditya.step2@chem.edu",
+      "classId": "cls-1788002099867-qy74",
+      "className": "B.Tech CSE - Chemistry for Engineers",
+      "sectionId": "sec-cls-1788002099867-qy74-a",
+      "sectionName": "Section A",
+      "teacherId": "teacher-step2-alok",
+      "teacherName": "AD",
+      "joinedAt": "2026-08-29T11:14:59.878Z",
+      "status": "active"
+    },
+    {
+      "id": "enr-1788002030665-yiem",
+      "studentId": "stu-step2-rohit",
+      "studentName": "Rohit Sharma",
+      "studentEmail": "rohit.step2@chem.edu",
+      "classId": "cls-1788002030650-0hea",
+      "className": "B.Tech CSE - Chemistry for Engineers",
+      "sectionId": "sec-1788002030657-o1cp",
+      "sectionName": "Section B",
+      "teacherId": "teacher-step2-alok",
+      "teacherName": "AD",
+      "joinedAt": "2026-08-29T11:13:50.665Z",
+      "status": "active"
+    },
+    {
+      "id": "enr-1788002030662-9477",
+      "studentId": "stu-step2-priya",
+      "studentName": "Priya Singh",
+      "studentEmail": "priya.step2@chem.edu",
+      "classId": "cls-1788002030650-0hea",
+      "className": "B.Tech CSE - Chemistry for Engineers",
+      "sectionId": "sec-cls-1788002030650-0hea-a",
+      "sectionName": "Section A",
+      "teacherId": "teacher-step2-alok",
+      "teacherName": "AD",
+      "joinedAt": "2026-08-29T11:13:50.662Z",
+      "status": "active"
+    },
+    {
+      "id": "enr-1788002030660-2jwj",
+      "studentId": "stu-step2-aditya",
+      "studentName": "Aditya Kumar",
+      "studentEmail": "aditya.step2@chem.edu",
+      "classId": "cls-1788002030650-0hea",
+      "className": "B.Tech CSE - Chemistry for Engineers",
+      "sectionId": "sec-cls-1788002030650-0hea-a",
+      "sectionName": "Section A",
+      "teacherId": "teacher-step2-alok",
+      "teacherName": "AD",
+      "joinedAt": "2026-08-29T11:13:50.660Z",
       "status": "active"
     },
     {
@@ -284,6 +508,315 @@
     }
   ],
   "exams": [
+    {
+      "id": "exam-1788002305429-ys11",
+      "title": "Chemistry Mid-Term Test",
+      "topic": "Thermodynamics & Kinetics",
+      "courseCode": "CSE-CHEM-2026",
+      "courseName": "CSE-CHEM-2026 � B.Tech CSE - Chemistry for Engineers",
+      "teacherId": "teacher-step2-alok-1788002305383",
+      "teacherName": "AD",
+      "classId": "cls-1788002305410-h201",
+      "className": "B.Tech CSE - Chemistry for Engineers",
+      "sectionId": "sec-cls-1788002305410-h201-a",
+      "sectionName": "Section A",
+      "durationMinutes": 60,
+      "instructions": "Standard examination rules apply. Complete all questions before the timer expires.",
+      "totalQuestions": 1,
+      "totalMarks": 50,
+      "passingMarks": 40,
+      "status": "published",
+      "questions": [
+        {
+          "id": "q-1",
+          "text": "Define standard enthalpy of formation.",
+          "type": "mcq",
+          "options": [
+            {
+              "id": "opt-1",
+              "text": "Enthalpy change when 1 mole of substance is formed",
+              "isCorrect": true
+            }
+          ],
+          "marks": 5
+        }
+      ],
+      "created_at": "2026-08-29T11:18:25.429Z",
+      "updated_at": "2026-08-29T11:18:25.434Z"
+    },
+    {
+      "id": "exam-1788002099890-own1",
+      "title": "Chemistry Mid-Term Test",
+      "topic": "Thermodynamics & Kinetics",
+      "courseCode": "CSE-CHEM-102",
+      "courseName": "CSE-CHEM-102 � B.Tech CSE - Chemistry for Engineers",
+      "teacherId": "teacher-step2-alok",
+      "teacherName": "AD",
+      "classId": "cls-1788002099867-qy74",
+      "className": "B.Tech CSE - Chemistry for Engineers",
+      "sectionId": "sec-cls-1788002099867-qy74-a",
+      "sectionName": "Section A",
+      "durationMinutes": 60,
+      "instructions": "Standard examination rules apply. Complete all questions before the timer expires.",
+      "totalQuestions": 1,
+      "totalMarks": 50,
+      "passingMarks": 40,
+      "status": "published",
+      "questions": [
+        {
+          "id": "q-1",
+          "text": "Define standard enthalpy of formation.",
+          "type": "mcq",
+          "options": [
+            {
+              "id": "opt-1",
+              "text": "Enthalpy change when 1 mole of substance is formed",
+              "isCorrect": true
+            }
+          ],
+          "marks": 5
+        }
+      ],
+      "created_at": "2026-08-29T11:14:59.890Z",
+      "updated_at": "2026-08-29T11:14:59.899Z"
+    },
+    {
+      "id": "exam-1788002030668-oh46",
+      "title": "Chemistry Mid-Term Test",
+      "topic": "Thermodynamics & Kinetics",
+      "courseCode": "CSE-CHEM-102",
+      "courseName": "CSE-CHEM-102 � B.Tech CSE - Chemistry for Engineers",
+      "teacherId": "teacher-step2-alok",
+      "teacherName": "AD",
+      "classId": "cls-1788002030650-0hea",
+      "className": "B.Tech CSE - Chemistry for Engineers",
+      "sectionId": "sec-cls-1788002030650-0hea-a",
+      "sectionName": "Section A",
+      "durationMinutes": 60,
+      "instructions": "Standard examination rules apply. Complete all questions before the timer expires.",
+      "totalQuestions": 1,
+      "totalMarks": 50,
+      "passingMarks": 40,
+      "status": "published",
+      "questions": [
+        {
+          "id": "q-1",
+          "text": "Define standard enthalpy of formation.",
+          "type": "mcq",
+          "options": [
+            {
+              "id": "opt-1",
+              "text": "Enthalpy change when 1 mole of substance is formed",
+              "isCorrect": true
+            }
+          ],
+          "marks": 5
+        }
+      ],
+      "created_at": "2026-08-29T11:13:50.668Z",
+      "updated_at": "2026-08-29T11:13:50.674Z"
+    },
+    {
+      "id": "exam-1788001812498-mv7h",
+      "title": "Organic Chemistry — Unit Test",
+      "courseCode": "AS",
+      "courseName": "AS � Chemistry",
+      "teacherId": "user-1788001639271-y1t1",
+      "teacherName": "AD",
+      "classId": "cls-1788001669870-5a9f",
+      "className": "ADOP",
+      "sectionId": "sec-cls-1788001669870-5a9f-a",
+      "sectionName": "Section A",
+      "durationMinutes": 60,
+      "totalQuestions": 6,
+      "totalMarks": 18,
+      "passingMarks": 40,
+      "status": "active",
+      "questions": [
+        {
+          "questionText": "Which reaction represents a combustion reaction?",
+          "options": [
+            {
+              "label": "A",
+              "text": "CH₄(g) + 2O₂(g) → CO₂(g) + 2H₂O(l)"
+            },
+            {
+              "label": "B",
+              "text": "CaCO₃(s) → CaO(s) + CO₂(g)"
+            },
+            {
+              "label": "C",
+              "text": "N₂(g) + 3H₂(g) ⇌ 2NH₃(g)"
+            },
+            {
+              "label": "D",
+              "text": "AgNO₃(aq) + NaCl(aq) → AgCl(s) + NaNO₃(aq)"
+            }
+          ],
+          "correctAnswer": "A",
+          "explanation": "Combustion involves rapid reaction of a fuel with O₂, producing CO₂ and H₂O. CH₄ + 2O₂ → CO₂ + 2H₂O is the combustion of methane.",
+          "topic": "Thermodynamics",
+          "difficulty": "Easy",
+          "marks": 2,
+          "id": "ai-1788001786596-2uc8r",
+          "source": "ai",
+          "needsReview": true,
+          "reviewReason": "AI-generated — teacher review required before publishing."
+        },
+        {
+          "questionText": "Calculate the pH of a 0.01 M HCl solution at 25°C.",
+          "options": [
+            {
+              "label": "A",
+              "text": "pH = 2"
+            },
+            {
+              "label": "B",
+              "text": "pH = 12"
+            },
+            {
+              "label": "C",
+              "text": "pH = 7"
+            },
+            {
+              "label": "D",
+              "text": "pH = 4"
+            }
+          ],
+          "correctAnswer": "A",
+          "explanation": "HCl is a strong acid that fully dissociates. [H⁺] = 0.01 M = 10⁻². pH = -log[H⁺] = -log(10⁻²) = 2.",
+          "topic": "Physical Chemistry",
+          "difficulty": "Easy",
+          "marks": 2,
+          "id": "ai-1788001786596-8v6um",
+          "source": "ai",
+          "needsReview": true,
+          "reviewReason": "AI-generated — teacher review required before publishing."
+        },
+        {
+          "questionText": "In the SN2 reaction of (R)-2-bromobutane with NaCN in DMF, what is the stereochemical outcome?",
+          "options": [
+            {
+              "label": "A",
+              "text": "(S)-2-methylbutanenitrile via Walden inversion"
+            },
+            {
+              "label": "B",
+              "text": "Racemic mixture via SN1 mechanism"
+            },
+            {
+              "label": "C",
+              "text": "Retention of configuration"
+            },
+            {
+              "label": "D",
+              "text": "E2 elimination product"
+            }
+          ],
+          "correctAnswer": "A",
+          "explanation": "SN2 is a backside attack mechanism causing complete inversion of configuration at the chiral center (Walden inversion).",
+          "topic": "Organic Chemistry",
+          "difficulty": "Medium",
+          "marks": 4,
+          "id": "ai-1788001786596-u3mnh",
+          "source": "ai",
+          "needsReview": true,
+          "reviewReason": "AI-generated — teacher review required before publishing."
+        },
+        {
+          "questionText": "What is the IUPAC name for CH₃-CH(OH)-COOH?",
+          "options": [
+            {
+              "label": "A",
+              "text": "2-hydroxypropanoic acid"
+            },
+            {
+              "label": "B",
+              "text": "3-hydroxypropanoic acid"
+            },
+            {
+              "label": "C",
+              "text": "Acetic acid"
+            },
+            {
+              "label": "D",
+              "text": "2-methylmalonic acid"
+            }
+          ],
+          "correctAnswer": "A",
+          "explanation": "The parent chain is propanoic acid (3 carbons with COOH). The OH group is at C-2, giving 2-hydroxypropanoic acid (lactic acid).",
+          "topic": "Organic Chemistry",
+          "difficulty": "Easy",
+          "marks": 2,
+          "id": "ai-1788001786596-dh5rg",
+          "source": "ai",
+          "needsReview": true,
+          "reviewReason": "AI-generated — teacher review required before publishing."
+        },
+        {
+          "questionText": "Which of the following has the highest lattice enthalpy?",
+          "options": [
+            {
+              "label": "A",
+              "text": "MgO"
+            },
+            {
+              "label": "B",
+              "text": "NaCl"
+            },
+            {
+              "label": "C",
+              "text": "KBr"
+            },
+            {
+              "label": "D",
+              "text": "CsI"
+            }
+          ],
+          "correctAnswer": "A",
+          "explanation": "Lattice enthalpy ∝ (charge product)/(ionic radius sum). MgO has Mg²⁺ and O²⁻ giving charge product = 4, much higher than Na⁺Cl⁻ (product = 1).",
+          "topic": "Chemical Bonding",
+          "difficulty": "Medium",
+          "marks": 4,
+          "id": "ai-1788001786596-p9kcz",
+          "source": "ai",
+          "needsReview": true,
+          "reviewReason": "AI-generated — teacher review required before publishing."
+        },
+        {
+          "questionText": "Which of these is an example of an electrophilic aromatic substitution?",
+          "options": [
+            {
+              "label": "A",
+              "text": "Nitration of benzene using HNO₃/H₂SO₄"
+            },
+            {
+              "label": "B",
+              "text": "Addition of Br₂ to cyclohexene"
+            },
+            {
+              "label": "C",
+              "text": "Saponification of an ester"
+            },
+            {
+              "label": "D",
+              "text": "Aldol condensation"
+            }
+          ],
+          "correctAnswer": "A",
+          "explanation": "Nitration of benzene involves attack by the nitronium ion (NO₂⁺) as electrophile on the aromatic ring, a classic EAS reaction.",
+          "topic": "Organic Chemistry",
+          "difficulty": "Medium",
+          "marks": 4,
+          "id": "ai-1788001804973-ld5xv",
+          "source": "ai",
+          "needsReview": true,
+          "reviewReason": "AI-generated — teacher review required before publishing."
+        }
+      ],
+      "created_at": "2026-08-29T11:10:12.508Z",
+      "updated_at": "2026-08-29T11:10:12.508Z"
+    },
     {
       "id": "exam-1788001515848-niut",
       "title": "Organic Chemistry — Unit Test",
@@ -623,5 +1156,20 @@
     }
   ],
   "attempts": [],
-  "evidence": []
+  "evidence": [
+    {
+      "id": "evi-1788001896864-8zc4",
+      "attemptId": "att-user-1788001854966-auig-6856",
+      "evidenceType": "proctoring_event",
+      "metadata": {},
+      "recordedAt": "2026-08-29T11:11:36.864Z"
+    },
+    {
+      "id": "evi-1788001736422-yyho",
+      "attemptId": "att-user-1788001352254-a73y-6412",
+      "evidenceType": "proctoring_event",
+      "metadata": {},
+      "recordedAt": "2026-08-29T11:08:56.422Z"
+    }
+  ]
 }

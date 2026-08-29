@@ -10,173 +10,20 @@ const DB_FILE = path.join(__dirname, 'database.json');
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
-// -- Database Initialization --------------------------------------------------
-
-const DEFAULT_DB = {
-  users: [
-    {
-      id: 'admin-001',
-      email: 'admin@examfight.chem',
-      full_name: 'Institutional Administrator',
-      role: 'admin',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    {
-      id: 'teacher-001',
-      email: 'teacher@examfight.chem',
-      full_name: 'Dr. Jatin Sharma',
-      role: 'teacher',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    {
-      id: 'student-001',
-      email: 'student@examfight.chem',
-      full_name: 'Aditya Student',
-      role: 'student',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }
-  ],
-  teacherCodes: [
-    {
-      id: 'code-001',
-      code: 'CHEM-FACULTY-2026-XP9R',
-      is_used: false,
-      created_at: new Date().toISOString(),
-      expires_at: null,
-    }
-  ],
-  classes: [
-    {
-      id: 'cls-chem-101',
-      name: 'General Chemistry 2026',
-      code: 'CHEM101',
-      teacher_id: 'teacher-001',
-      teacher_name: 'Dr. Jatin Sharma',
-      academic_year: '2026-27',
-      subject: 'Chemistry',
-      description: 'Comprehensive general and physical chemistry curriculum',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }
-  ],
-  sections: [
-    {
-      id: 'sec-chem-101-a',
-      class_id: 'cls-chem-101',
-      className: 'General Chemistry 2026',
-      name: 'Section A',
-      enrollment_code: 'CHEM-A8X9',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }
-  ],
-  enrollments: [],
-  exams: [
-    {
-      id: 'exam-sample-001',
-      title: 'Chemical Kinetics & Thermodynamics Midterm',
-      courseCode: 'CHEM101',
-      courseName: 'CHEM101 — General Chemistry 2026',
-      teacherId: 'teacher-001',
-      teacherName: 'Dr. Jatin Sharma',
-      classId: 'cls-chem-101',
-      className: 'General Chemistry 2026',
-      sectionId: 'sec-chem-101-a',
-      sectionName: 'Section A',
-      durationMinutes: 60,
-      totalQuestions: 5,
-      totalMarks: 20,
-      passingMarks: 8,
-      status: 'active',
-      questions: [
-        {
-          id: 'q-1',
-          text: 'What is the SI unit of the rate constant for a first-order reaction?',
-          type: 'mcq',
-          options: [
-            { id: 'opt-1', text: 's?¹', isCorrect: true },
-            { id: 'opt-2', text: 'mol L?¹ s?¹', isCorrect: false },
-            { id: 'opt-3', text: 'L mol?¹ s?¹', isCorrect: false },
-            { id: 'opt-4', text: 'mol?² L² s?¹', isCorrect: false }
-          ],
-          marks: 4,
-          negativeMarks: 1
-        },
-        {
-          id: 'q-2',
-          text: 'Which law states that the total enthalpy change of a reaction is the sum of all changes?',
-          type: 'mcq',
-          options: [
-            { id: 'opt-1', text: 'Hess\'s Law', isCorrect: true },
-            { id: 'opt-2', text: 'Raoult\'s Law', isCorrect: false },
-            { id: 'opt-3', text: 'Henry\'s Law', isCorrect: false },
-            { id: 'opt-4', text: 'Le Chatelier\'s Principle', isCorrect: false }
-          ],
-          marks: 4,
-          negativeMarks: 1
-        },
-        {
-          id: 'q-3',
-          text: 'What is the oxidation state of Chromium in Potassium Dichromate (K2Cr2O7)?',
-          type: 'mcq',
-          options: [
-            { id: 'opt-1', text: '+6', isCorrect: true },
-            { id: 'opt-2', text: '+3', isCorrect: false },
-            { id: 'opt-3', text: '+4', isCorrect: false },
-            { id: 'opt-4', text: '+2', isCorrect: false }
-          ],
-          marks: 4,
-          negativeMarks: 1
-        },
-        {
-          id: 'q-4',
-          text: 'Which orbital has a spherical shape?',
-          type: 'mcq',
-          options: [
-            { id: 'opt-1', text: 's-orbital', isCorrect: true },
-            { id: 'opt-2', text: 'p-orbital', isCorrect: false },
-            { id: 'opt-3', text: 'd-orbital', isCorrect: false },
-            { id: 'opt-4', text: 'f-orbital', isCorrect: false }
-          ],
-          marks: 4,
-          negativeMarks: 1
-        },
-        {
-          id: 'q-5',
-          text: 'At standard temperature and pressure (STP), what volume does 1 mole of an ideal gas occupy?',
-          type: 'mcq',
-          options: [
-            { id: 'opt-1', text: '22.4 Liters', isCorrect: true },
-            { id: 'opt-2', text: '24.8 Liters', isCorrect: false },
-            { id: 'opt-3', text: '11.2 Liters', isCorrect: false },
-            { id: 'opt-4', text: '44.8 Liters', isCorrect: false }
-          ],
-          marks: 4,
-          negativeMarks: 1
-        }
-      ],
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }
-  ],
-  attempts: [],
-  evidence: []
-};
+// -- Database Helpers ---------------------------------------------------------
 
 function readDB() {
   try {
     if (!fs.existsSync(DB_FILE)) {
-      fs.writeFileSync(DB_FILE, JSON.stringify(DEFAULT_DB, null, 2), 'utf8');
-      return DEFAULT_DB;
+      const initial = { users: [], teacherCodes: [], classes: [], sections: [], enrollments: [], exams: [], attempts: [], evidence: [] };
+      fs.writeFileSync(DB_FILE, JSON.stringify(initial, null, 2), 'utf8');
+      return initial;
     }
     const raw = fs.readFileSync(DB_FILE, 'utf8');
     return JSON.parse(raw);
   } catch (err) {
     console.error('DB read error:', err);
-    return DEFAULT_DB;
+    return { users: [], teacherCodes: [], classes: [], sections: [], enrollments: [], exams: [], attempts: [], evidence: [] };
   }
 }
 
@@ -214,7 +61,7 @@ app.post('/api/auth/login', (req, res) => {
   if (!user) {
     let role = 'student';
     if (email.toLowerCase().includes('admin')) role = 'admin';
-    else if (email.toLowerCase().includes('teacher') || email.toLowerCase().includes('faculty')) role = 'teacher';
+    else if (email.toLowerCase().includes('teacher') || email.toLowerCase().includes('faculty') || email.toLowerCase().includes('prof')) role = 'teacher';
 
     user = {
       id: `user-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -359,7 +206,6 @@ app.post('/api/classes', (req, res) => {
 
   db.classes.unshift(newClass);
 
-  // Automatically create Section A with unique enrollment code
   const codePrefix = cleanCode.substring(0, 4);
   const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
   const enrollmentCode = `${codePrefix}-A${randomSuffix}`;
@@ -385,6 +231,7 @@ app.delete('/api/classes/:id', (req, res) => {
   db.classes = db.classes.filter(c => c.id !== id);
   db.sections = db.sections.filter(s => s.class_id !== id);
   db.enrollments = db.enrollments.filter(e => e.classId !== id);
+  db.exams = db.exams.filter(e => e.classId !== id);
   writeDB(db);
   res.json({ success: true });
 });
@@ -447,11 +294,12 @@ app.delete('/api/sections/:id', (req, res) => {
   const db = readDB();
   db.sections = db.sections.filter(s => s.id !== id);
   db.enrollments = db.enrollments.filter(e => e.sectionId !== id);
+  db.exams = db.exams.filter(e => e.sectionId !== id);
   writeDB(db);
   res.json({ success: true });
 });
 
-// -- 6. Student Join Class By Code (CRITICAL REAL CONNECTION) ------------------
+// -- 6. Student Join Class By Code (Enrollments) -------------------------------
 
 app.post('/api/classes/join', (req, res) => {
   const { studentId, studentName, studentEmail, enrollmentCode } = req.body;
@@ -465,7 +313,6 @@ app.post('/api/classes/join', (req, res) => {
 
   const db = readDB();
 
-  // 1. Find section matching enrollment_code (exact, stripped, or fuzzy)
   let section = db.sections.find(s => {
     const sClean = s.enrollment_code.toUpperCase();
     const sStripped = sClean.replace(/[^A-Z0-9]/g, '');
@@ -473,7 +320,6 @@ app.post('/api/classes/join', (req, res) => {
     return sClean === cleanCode || sStripped === strippedCode || sFuzzy === fuzzyCode;
   });
 
-  // 2. Also check if matched against class code directly
   let cls = null;
   if (section) {
     cls = db.classes.find(c => c.id === section.class_id);
@@ -489,7 +335,6 @@ app.post('/api/classes/join', (req, res) => {
     }
   }
 
-  // 3. Fallback Dynamic Resolution for Institutional Academic Keys (e.g. CHE-SPOLQ)
   if (!section || !cls) {
     const parts = cleanCode.split('-');
     const classPrefix = parts[0] || 'CHEM';
@@ -528,7 +373,6 @@ app.post('/api/classes/join', (req, res) => {
     db.sections.push(section);
   }
 
-  // 4. Check duplicate enrollment
   const existingEnrollment = db.enrollments.find(e =>
     (e.studentId === studentId || (studentEmail && e.studentEmail.toLowerCase() === studentEmail.toLowerCase())) &&
     e.classId === cls.id
@@ -538,11 +382,9 @@ app.post('/api/classes/join', (req, res) => {
     return res.status(400).json({ error: `You are already enrolled in ${cls.name} (${section.name}).` });
   }
 
-  // 5. Look up teacher real name
   const teacherUser = db.users.find(u => u.id === cls.teacher_id || u.role === 'teacher');
   const actualTeacherName = teacherUser?.full_name || cls.teacher_name || 'Dr. Jatin Sharma';
 
-  // 6. Create enrollment record
   const newEnrollment = {
     id: `enr-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
     studentId: studentId || `stu-${Date.now()}`,
@@ -588,7 +430,8 @@ app.get('/api/enrollments', (req, res) => {
     list = list.filter(e => e.classId === classId);
   }
   if (teacherId) {
-    list = list.filter(e => e.teacherId === teacherId);
+    const teacherClasses = db.classes.filter(c => c.teacher_id === teacherId).map(c => c.id);
+    list = list.filter(e => e.teacherId === teacherId || teacherClasses.includes(e.classId));
   }
 
   res.json({ success: true, enrollments: list });
@@ -602,20 +445,62 @@ app.delete('/api/enrollments/:id', (req, res) => {
   res.json({ success: true });
 });
 
-// -- 7. Exams & Question Endpoints ---------------------------------------------
+// -- 7. Exams & Assignment Pipeline (STEP 2 CORE) ------------------------------
 
 app.get('/api/exams', (req, res) => {
-  const { teacherId, sectionIds } = req.query;
+  const { teacherId, studentId, studentEmail, sectionIds, status } = req.query;
   const db = readDB();
   let list = db.exams;
 
+  // 1. Teacher Query: View own exams with real enrolled student count
   if (teacherId) {
-    list = list.filter(e => !e.teacherId || e.teacherId === teacherId);
+    list = list.filter(e => e.teacherId === teacherId || !e.teacherId);
+    list = list.map(e => {
+      const count = e.sectionId
+        ? db.enrollments.filter(enr => enr.sectionId === e.sectionId && enr.status === 'active').length
+        : e.classId
+        ? db.enrollments.filter(enr => enr.classId === e.classId && enr.status === 'active').length
+        : 0;
+      return { ...e, enrolledStudentsCount: count };
+    });
+    return res.json({ success: true, exams: list });
+  }
+
+  // 2. Student Query: Strictly resolve enrolled sections and return PUBLISHED exams
+  if (studentId || studentEmail) {
+    const studentEnrollments = db.enrollments.filter(e =>
+      e.status === 'active' &&
+      ((studentId && e.studentId === studentId) ||
+       (studentEmail && e.studentEmail && e.studentEmail.toLowerCase() === studentEmail.toLowerCase()))
+    );
+
+    const enrolledSecIds = studentEnrollments.map(e => e.sectionId).filter(Boolean);
+    const enrolledClsIds = studentEnrollments.map(e => e.classId).filter(Boolean);
+
+    list = list.filter(e => {
+      const isPublished = e.status === 'published' || e.status === 'active';
+      if (!isPublished) return false;
+
+      // Check section-level eligibility
+      if (e.sectionId) {
+        return enrolledSecIds.includes(e.sectionId);
+      }
+      if (e.classId) {
+        return enrolledClsIds.includes(e.classId);
+      }
+      return false;
+    });
+
+    return res.json({ success: true, exams: list });
   }
 
   if (sectionIds) {
     const secArr = Array.isArray(sectionIds) ? sectionIds : sectionIds.split(',');
-    list = list.filter(e => !e.sectionId || secArr.includes(e.sectionId));
+    list = list.filter(e => e.sectionId && secArr.includes(e.sectionId));
+  }
+
+  if (status) {
+    list = list.filter(e => e.status === status);
   }
 
   res.json({ success: true, exams: list });
@@ -623,9 +508,34 @@ app.get('/api/exams', (req, res) => {
 
 app.get('/api/exams/:id', (req, res) => {
   const { id } = req.params;
+  const { studentId, studentEmail } = req.query;
   const db = readDB();
   const exam = db.exams.find(e => e.id === id);
   if (!exam) return res.status(404).json({ error: 'Exam not found.' });
+
+  // Security check: if student attempts direct access, verify enrollment and publish status
+  if (studentId || studentEmail) {
+    const isPublished = exam.status === 'published' || exam.status === 'active';
+    if (!isPublished) {
+      return res.status(403).json({ error: 'This examination is currently unpublished or in draft status.' });
+    }
+
+    if (exam.sectionId || exam.classId) {
+      const hasEnrollment = db.enrollments.some(e =>
+        e.status === 'active' &&
+        ((studentId && e.studentId === studentId) ||
+         (studentEmail && e.studentEmail && e.studentEmail.toLowerCase() === studentEmail.toLowerCase())) &&
+        (exam.sectionId ? e.sectionId === exam.sectionId : e.classId === exam.classId)
+        );
+
+      if (!hasEnrollment) {
+        return res.status(403).json({
+          error: 'Access Denied: You are not enrolled in the class section to which this examination is assigned.'
+        });
+      }
+    }
+  }
+
   res.json({ success: true, exam });
 });
 
@@ -633,22 +543,66 @@ app.post('/api/exams', (req, res) => {
   const examData = req.body;
   const db = readDB();
 
+  if (!examData.title || !examData.title.trim()) {
+    return res.status(400).json({ error: 'Exam title is required.' });
+  }
+
+  const teacherId = examData.teacherId || 'teacher-001';
+
+  // 1. Verify Teacher Ownership of Class & Section
+  let className = examData.className || 'Class';
+  let sectionName = examData.sectionName || 'Section A';
+  let courseCode = examData.courseCode || 'CHEM101';
+
+  if (examData.classId) {
+    const cls = db.classes.find(c => c.id === examData.classId);
+    if (!cls) {
+      return res.status(404).json({ error: 'Selected class does not exist in the database.' });
+    }
+    if (cls.teacher_id && cls.teacher_id !== teacherId) {
+      return res.status(403).json({ error: 'Forbidden: You cannot assign examinations to another faculty member\'s class.' });
+    }
+    className = cls.name;
+    courseCode = cls.code;
+  }
+
+  if (examData.sectionId) {
+    const sec = db.sections.find(s => s.id === examData.sectionId);
+    if (!sec) {
+      return res.status(404).json({ error: 'Selected section does not exist in the database.' });
+    }
+    if (examData.classId && sec.class_id !== examData.classId) {
+      return res.status(400).json({ error: 'Selected section does not belong to the selected class.' });
+    }
+    sectionName = sec.name;
+  }
+
+  // Teacher Profile Resolution
+  const teacherUser = db.users.find(u => u.id === teacherId || u.role === 'teacher');
+  const actualTeacherName = teacherUser?.full_name || examData.teacherName || 'Faculty Instructor';
+
+  // Standardize Status: 'published' | 'draft' | 'closed'
+  let safeStatus = (examData.status || 'published').toLowerCase();
+  if (safeStatus === 'active') safeStatus = 'published';
+
   const newExam = {
     id: examData.id || `exam-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-    title: examData.title || 'Chemistry Examination',
-    courseCode: examData.courseCode || 'CHEM101',
-    courseName: examData.courseName || `${examData.courseCode || 'CHEM101'} — Chemistry`,
-    teacherId: examData.teacherId || 'teacher-001',
-    teacherName: examData.teacherName || 'Dr. Jatin Sharma',
+    title: examData.title.trim(),
+    topic: examData.topic || 'General Chemistry',
+    courseCode: courseCode.trim().toUpperCase(),
+    courseName: `${courseCode} ï¿½ ${className}`,
+    teacherId,
+    teacherName: actualTeacherName,
     classId: examData.classId || null,
-    className: examData.className || 'Class',
+    className,
     sectionId: examData.sectionId || null,
-    sectionName: examData.sectionName || 'Section A',
+    sectionName,
     durationMinutes: Number(examData.durationMinutes) || 60,
+    instructions: examData.instructions || 'Standard examination rules apply. Complete all questions before the timer expires.',
     totalQuestions: examData.questions ? examData.questions.length : 10,
     totalMarks: Number(examData.totalMarks) || 100,
     passingMarks: Number(examData.passingMarks) || 40,
-    status: examData.status || 'active',
+    status: safeStatus,
     questions: examData.questions || [],
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
@@ -662,7 +616,37 @@ app.post('/api/exams', (req, res) => {
   }
 
   writeDB(db);
-  res.json({ success: true, exam: newExam });
+
+  const enrolledCount = newExam.sectionId
+    ? db.enrollments.filter(e => e.sectionId === newExam.sectionId && e.status === 'active').length
+    : 0;
+
+  res.json({
+    success: true,
+    exam: { ...newExam, enrolledStudentsCount: enrolledCount },
+  });
+});
+
+app.put('/api/exams/:id/status', (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  const db = readDB();
+  const exam = db.exams.find(e => e.id === id);
+  if (!exam) return res.status(404).json({ error: 'Exam not found.' });
+
+  exam.status = status;
+  exam.updated_at = new Date().toISOString();
+  writeDB(db);
+  res.json({ success: true, exam });
+});
+
+app.delete('/api/exams/:id', (req, res) => {
+  const { id } = req.params;
+  const db = readDB();
+  db.exams = db.exams.filter(e => e.id !== id);
+  db.attempts = db.attempts.filter(a => a.examId !== id);
+  writeDB(db);
+  res.json({ success: true });
 });
 
 // -- 8. Attempts & Proctoring Evidence Endpoints -------------------------------
@@ -746,3 +730,4 @@ app.get('/api/evidence/:attemptId', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Exam Fight Chemistry REST Backend running on http://localhost:${PORT}`);
 });
+
