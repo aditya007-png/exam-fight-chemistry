@@ -47,6 +47,18 @@
   ],
   "classes": [
     {
+      "id": "cls-1788004611626-dboy",
+      "name": "B.Tech CSE - Analytical Chemistry",
+      "code": "CSE-CHEM-501",
+      "teacher_id": "teacher-s5-alok-1788004611592",
+      "teacher_name": "Prof. Alok Verma",
+      "academic_year": "2026-27",
+      "subject": "Chemistry",
+      "description": "",
+      "created_at": "2026-08-29T11:56:51.626Z",
+      "updated_at": "2026-08-29T11:56:51.627Z"
+    },
+    {
       "id": "cls-1788004065430-o4n9",
       "name": "Physical Chem",
       "code": "PC101",
@@ -241,6 +253,15 @@
   ],
   "sections": [
     {
+      "id": "sec-cls-1788004611626-dboy-a",
+      "class_id": "cls-1788004611626-dboy",
+      "className": "B.Tech CSE - Analytical Chemistry",
+      "name": "Section A",
+      "enrollment_code": "CSE--AH9C9",
+      "created_at": "2026-08-29T11:56:51.627Z",
+      "updated_at": "2026-08-29T11:56:51.627Z"
+    },
+    {
       "id": "sec-cls-1788004065430-o4n9-a",
       "class_id": "cls-1788004065430-o4n9",
       "className": "Physical Chem",
@@ -419,9 +440,60 @@
       "enrollment_code": "CSE--SILSP",
       "created_at": "2026-08-29T11:18:25.416Z",
       "updated_at": "2026-08-29T11:18:25.416Z"
+    },
+    {
+      "id": "sec-1788004611636-unul",
+      "class_id": "cls-1788004611626-dboy",
+      "className": "B.Tech CSE - Analytical Chemistry",
+      "name": "Section B",
+      "enrollment_code": "CSE--SRFN4",
+      "created_at": "2026-08-29T11:56:51.636Z",
+      "updated_at": "2026-08-29T11:56:51.636Z"
     }
   ],
   "enrollments": [
+    {
+      "id": "enr-1788004611646-jgc5",
+      "studentId": "stu-s5-priya-1788004611592",
+      "studentName": "Priya Patel",
+      "studentEmail": "priya.s5.1788004611592@chem.edu",
+      "classId": "cls-1788004611626-dboy",
+      "className": "B.Tech CSE - Analytical Chemistry",
+      "sectionId": "sec-1788004611636-unul",
+      "sectionName": "Section B",
+      "teacherId": "teacher-s5-alok-1788004611592",
+      "teacherName": "Prof. Alok Verma",
+      "joinedAt": "2026-08-29T11:56:51.646Z",
+      "status": "active"
+    },
+    {
+      "id": "enr-1788004611644-sy8s",
+      "studentId": "stu-s5-rohit-1788004611592",
+      "studentName": "Rohit Sharma",
+      "studentEmail": "rohit.s5.1788004611592@chem.edu",
+      "classId": "cls-1788004611626-dboy",
+      "className": "B.Tech CSE - Analytical Chemistry",
+      "sectionId": "sec-cls-1788004611626-dboy-a",
+      "sectionName": "Section A",
+      "teacherId": "teacher-s5-alok-1788004611592",
+      "teacherName": "Prof. Alok Verma",
+      "joinedAt": "2026-08-29T11:56:51.644Z",
+      "status": "active"
+    },
+    {
+      "id": "enr-1788004611640-e25k",
+      "studentId": "stu-s5-aditya-1788004611592",
+      "studentName": "Aditya Kumar",
+      "studentEmail": "aditya.s5.1788004611592@chem.edu",
+      "classId": "cls-1788004611626-dboy",
+      "className": "B.Tech CSE - Analytical Chemistry",
+      "sectionId": "sec-cls-1788004611626-dboy-a",
+      "sectionName": "Section A",
+      "teacherId": "teacher-s5-alok-1788004611592",
+      "teacherName": "Prof. Alok Verma",
+      "joinedAt": "2026-08-29T11:56:51.641Z",
+      "status": "active"
+    },
     {
       "id": "enr-1788004065437-o0ai",
       "studentId": "stu-1788004065409",
@@ -760,6 +832,169 @@
     }
   ],
   "exams": [
+    {
+      "id": "exam-1788004611650-s5y1",
+      "title": "Thermodynamics & Reaction Kinetics",
+      "topic": "General Chemistry",
+      "courseCode": "CSE-CHEM-501",
+      "courseName": "CSE-CHEM-501 — B.Tech CSE - Analytical Chemistry",
+      "teacherId": "teacher-s5-alok-1788004611592",
+      "teacherName": "Prof. Alok Verma",
+      "classId": "cls-1788004611626-dboy",
+      "className": "B.Tech CSE - Analytical Chemistry",
+      "sectionId": "sec-cls-1788004611626-dboy-a",
+      "sectionName": "Section A",
+      "durationMinutes": 45,
+      "instructions": "Standard examination rules apply. Complete all questions before the timer expires.",
+      "totalQuestions": 5,
+      "totalMarks": 5,
+      "passingMarks": 2,
+      "status": "published",
+      "questions": [
+        {
+          "id": "q1-gibbs",
+          "text": "What is the change in Gibbs free energy for a spontaneous process at constant T and P?",
+          "type": "mcq",
+          "marks": 1,
+          "options": [
+            {
+              "id": "opt1-a",
+              "text": "ΔG > 0",
+              "isCorrect": false
+            },
+            {
+              "id": "opt1-b",
+              "text": "ΔG < 0",
+              "isCorrect": true
+            },
+            {
+              "id": "opt1-c",
+              "text": "ΔG = 0",
+              "isCorrect": false
+            },
+            {
+              "id": "opt1-d",
+              "text": "ΔG = ΔH",
+              "isCorrect": false
+            }
+          ]
+        },
+        {
+          "id": "q2-order",
+          "text": "What are the units of rate constant for a first-order reaction?",
+          "type": "mcq",
+          "marks": 1,
+          "options": [
+            {
+              "id": "opt2-a",
+              "text": "mol L⁻¹ s⁻¹",
+              "isCorrect": false
+            },
+            {
+              "id": "opt2-b",
+              "text": "s⁻¹",
+              "isCorrect": true
+            },
+            {
+              "id": "opt2-c",
+              "text": "L mol⁻¹ s⁻¹",
+              "isCorrect": false
+            },
+            {
+              "id": "opt2-d",
+              "text": "L² mol⁻² s⁻¹",
+              "isCorrect": false
+            }
+          ]
+        },
+        {
+          "id": "q3-arrhenius",
+          "text": "According to Arrhenius equation, the slope of ln(k) vs 1/T is:",
+          "type": "mcq",
+          "marks": 1,
+          "options": [
+            {
+              "id": "opt3-a",
+              "text": "-Ea/R",
+              "isCorrect": true
+            },
+            {
+              "id": "opt3-b",
+              "text": "+Ea/R",
+              "isCorrect": false
+            },
+            {
+              "id": "opt3-c",
+              "text": "-Ea/2.303",
+              "isCorrect": false
+            },
+            {
+              "id": "opt3-d",
+              "text": "Ea/RT",
+              "isCorrect": false
+            }
+          ]
+        },
+        {
+          "id": "q4-enthalpy",
+          "text": "For an endothermic reaction, enthalpy change ΔH is:",
+          "type": "mcq",
+          "marks": 1,
+          "options": [
+            {
+              "id": "opt4-a",
+              "text": "Positive (> 0)",
+              "isCorrect": true
+            },
+            {
+              "id": "opt4-b",
+              "text": "Negative (< 0)",
+              "isCorrect": false
+            },
+            {
+              "id": "opt4-c",
+              "text": "Zero",
+              "isCorrect": false
+            },
+            {
+              "id": "opt4-d",
+              "text": "Infinity",
+              "isCorrect": false
+            }
+          ]
+        },
+        {
+          "id": "q5-catalyst",
+          "text": "A catalyst increases reaction rate by:",
+          "type": "mcq",
+          "marks": 1,
+          "options": [
+            {
+              "id": "opt5-a",
+              "text": "Increasing activation energy",
+              "isCorrect": false
+            },
+            {
+              "id": "opt5-b",
+              "text": "Lowering activation energy",
+              "isCorrect": true
+            },
+            {
+              "id": "opt5-c",
+              "text": "Increasing temperature",
+              "isCorrect": false
+            },
+            {
+              "id": "opt5-d",
+              "text": "Altering equilibrium constant",
+              "isCorrect": false
+            }
+          ]
+        }
+      ],
+      "created_at": "2026-08-29T11:56:51.650Z",
+      "updated_at": "2026-08-29T11:56:51.650Z"
+    },
     {
       "id": "exam-1788004065441-oqzk",
       "title": "Kinetics Quiz",
@@ -1642,6 +1877,110 @@
   ],
   "attempts": [
     {
+      "id": "att-1788004611655-56f3",
+      "examId": "exam-1788004611650-s5y1",
+      "examTitle": "Thermodynamics & Reaction Kinetics",
+      "courseCode": "CSE-CHEM-501",
+      "className": "B.Tech CSE - Analytical Chemistry",
+      "studentId": "stu-s5-aditya-1788004611592",
+      "studentName": "Aditya Kumar",
+      "studentEmail": "aditya.s5.1788004611592@chem.edu",
+      "sectionId": "sec-cls-1788004611626-dboy-a",
+      "status": "submitted",
+      "score": 3,
+      "totalMarks": 5,
+      "integrityScore": 100,
+      "answers": {
+        "q1-gibbs": {
+          "selectedOptionIds": [
+            "opt1-b"
+          ]
+        },
+        "q2-order": {
+          "selectedOptionIds": [
+            "opt2-b"
+          ]
+        },
+        "q3-arrhenius": {
+          "selectedOptionIds": [
+            "opt3-a"
+          ]
+        },
+        "q4-enthalpy": {
+          "selectedOptionIds": [
+            "opt4-b"
+          ]
+        },
+        "q5-catalyst": {
+          "selectedOptionIds": [
+            "opt5-a"
+          ]
+        }
+      },
+      "proctoringEvents": [],
+      "startedAt": "2026-08-29T11:56:51.655Z",
+      "submittedAt": "2026-08-29T11:56:51.658Z",
+      "created_at": "2026-08-29T11:56:51.655Z",
+      "updated_at": "2026-08-29T11:56:51.658Z",
+      "questionResults": [
+        {
+          "questionId": "q1-gibbs",
+          "questionNumber": 1,
+          "questionText": "What is the change in Gibbs free energy for a spontaneous process at constant T and P?",
+          "type": "mcq",
+          "studentAnswer": "ΔG < 0",
+          "correctAnswer": "ΔG < 0",
+          "isCorrect": true,
+          "marks": 1,
+          "obtainedMarks": 1
+        },
+        {
+          "questionId": "q2-order",
+          "questionNumber": 2,
+          "questionText": "What are the units of rate constant for a first-order reaction?",
+          "type": "mcq",
+          "studentAnswer": "s⁻¹",
+          "correctAnswer": "s⁻¹",
+          "isCorrect": true,
+          "marks": 1,
+          "obtainedMarks": 1
+        },
+        {
+          "questionId": "q3-arrhenius",
+          "questionNumber": 3,
+          "questionText": "According to Arrhenius equation, the slope of ln(k) vs 1/T is:",
+          "type": "mcq",
+          "studentAnswer": "-Ea/R",
+          "correctAnswer": "-Ea/R",
+          "isCorrect": true,
+          "marks": 1,
+          "obtainedMarks": 1
+        },
+        {
+          "questionId": "q4-enthalpy",
+          "questionNumber": 4,
+          "questionText": "For an endothermic reaction, enthalpy change ΔH is:",
+          "type": "mcq",
+          "studentAnswer": "Negative (< 0)",
+          "correctAnswer": "Positive (> 0)",
+          "isCorrect": false,
+          "marks": 1,
+          "obtainedMarks": 0
+        },
+        {
+          "questionId": "q5-catalyst",
+          "questionNumber": 5,
+          "questionText": "A catalyst increases reaction rate by:",
+          "type": "mcq",
+          "studentAnswer": "Increasing activation energy",
+          "correctAnswer": "Lowering activation energy",
+          "isCorrect": false,
+          "marks": 1,
+          "obtainedMarks": 0
+        }
+      ]
+    },
+    {
       "id": "att-1788004065444-sn62",
       "examId": "exam-1788004065441-oqzk",
       "examTitle": "Kinetics Quiz",
@@ -1925,6 +2264,22 @@
         "integrityScore": 95
       },
       "recordedAt": "2026-08-29T11:21:35.546Z"
+    },
+    {
+      "id": "evi-sub-1788004611658",
+      "examId": "exam-1788004611650-s5y1",
+      "attemptId": "att-1788004611655-56f3",
+      "studentId": "stu-s5-aditya-1788004611592",
+      "evidenceType": "exam_submission",
+      "metadata": {
+        "score": 3,
+        "totalMarks": 5,
+        "correctCount": 3,
+        "incorrectCount": 2,
+        "unattemptedCount": 0,
+        "integrityScore": 100
+      },
+      "recordedAt": "2026-08-29T11:56:51.658Z"
     }
   ],
   "requests": [
@@ -2037,6 +2392,87 @@
       "resolvedAt": "2026-08-29T11:31:23.397Z",
       "createdAt": "2026-08-29T11:31:23.389Z",
       "updatedAt": "2026-08-29T11:31:23.397Z"
+    }
+  ],
+  "results": [
+    {
+      "id": "res-att-1788004611655-56f3",
+      "studentId": "stu-s5-aditya-1788004611592",
+      "studentName": "Aditya Kumar",
+      "studentEmail": "aditya.s5.1788004611592@chem.edu",
+      "teacherId": "teacher-s5-alok-1788004611592",
+      "teacherName": "Prof. Alok Verma",
+      "classId": "cls-1788004611626-dboy",
+      "className": "B.Tech CSE - Analytical Chemistry",
+      "sectionId": "sec-cls-1788004611626-dboy-a",
+      "sectionName": "Section A",
+      "examId": "exam-1788004611650-s5y1",
+      "examTitle": "Thermodynamics & Reaction Kinetics",
+      "attemptId": "att-1788004611655-56f3",
+      "obtainedMarks": 3,
+      "totalMarks": 5,
+      "percentage": 60,
+      "status": "EVALUATED",
+      "questionResults": [
+        {
+          "questionId": "q1-gibbs",
+          "questionNumber": 1,
+          "questionText": "What is the change in Gibbs free energy for a spontaneous process at constant T and P?",
+          "type": "mcq",
+          "studentAnswer": "ΔG < 0",
+          "correctAnswer": "ΔG < 0",
+          "isCorrect": true,
+          "marks": 1,
+          "obtainedMarks": 1
+        },
+        {
+          "questionId": "q2-order",
+          "questionNumber": 2,
+          "questionText": "What are the units of rate constant for a first-order reaction?",
+          "type": "mcq",
+          "studentAnswer": "s⁻¹",
+          "correctAnswer": "s⁻¹",
+          "isCorrect": true,
+          "marks": 1,
+          "obtainedMarks": 1
+        },
+        {
+          "questionId": "q3-arrhenius",
+          "questionNumber": 3,
+          "questionText": "According to Arrhenius equation, the slope of ln(k) vs 1/T is:",
+          "type": "mcq",
+          "studentAnswer": "-Ea/R",
+          "correctAnswer": "-Ea/R",
+          "isCorrect": true,
+          "marks": 1,
+          "obtainedMarks": 1
+        },
+        {
+          "questionId": "q4-enthalpy",
+          "questionNumber": 4,
+          "questionText": "For an endothermic reaction, enthalpy change ΔH is:",
+          "type": "mcq",
+          "studentAnswer": "Negative (< 0)",
+          "correctAnswer": "Positive (> 0)",
+          "isCorrect": false,
+          "marks": 1,
+          "obtainedMarks": 0
+        },
+        {
+          "questionId": "q5-catalyst",
+          "questionNumber": 5,
+          "questionText": "A catalyst increases reaction rate by:",
+          "type": "mcq",
+          "studentAnswer": "Increasing activation energy",
+          "correctAnswer": "Lowering activation energy",
+          "isCorrect": false,
+          "marks": 1,
+          "obtainedMarks": 0
+        }
+      ],
+      "submittedAt": "2026-08-29T11:56:51.658Z",
+      "createdAt": "2026-08-29T11:56:51.658Z",
+      "updatedAt": "2026-08-29T11:56:51.658Z"
     }
   ]
 }

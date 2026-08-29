@@ -33,6 +33,7 @@ import { ExamBuilderPage } from './pages/teacher/ExamBuilderPage';
 import { TeacherExamsPage } from './pages/teacher/TeacherExamsPage';
 import { TeacherStudentsPage } from './pages/teacher/TeacherStudentsPage';
 import { TeacherRequestsPage } from './pages/teacher/TeacherRequestsPage';
+import { TeacherResultsPage } from './pages/teacher/TeacherResultsPage';
 import { ProctoringReviewPage } from './pages/teacher/ProctoringReviewPage';
 
 // Admin Pages
@@ -274,6 +275,18 @@ export const App: React.FC = () => {
                 <RoleGuard allowedRoles={['teacher']}>
                   <DashboardLayout>
                     <TeacherRequestsPage />
+                  </DashboardLayout>
+                </RoleGuard>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teacher/results"
+            element={
+              <ProtectedRoute>
+                <RoleGuard allowedRoles={['teacher']}>
+                  <DashboardLayout>
+                    <TeacherResultsPage />
                   </DashboardLayout>
                 </RoleGuard>
               </ProtectedRoute>

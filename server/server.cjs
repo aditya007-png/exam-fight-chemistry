@@ -15,17 +15,18 @@ app.use(express.json({ limit: '50mb' }));
 function readDB() {
   try {
     if (!fs.existsSync(DB_FILE)) {
-      const initial = { users: [], teacherCodes: [], classes: [], sections: [], enrollments: [], exams: [], attempts: [], evidence: [], requests: [] };
+      const initial = { users: [], teacherCodes: [], classes: [], sections: [], enrollments: [], exams: [], attempts: [], evidence: [], requests: [], results: [] };
       fs.writeFileSync(DB_FILE, JSON.stringify(initial, null, 2), 'utf8');
       return initial;
     }
     const raw = fs.readFileSync(DB_FILE, 'utf8');
     const parsed = JSON.parse(raw);
     if (!parsed.requests) parsed.requests = [];
+    if (!parsed.results) parsed.results = [];
     return parsed;
   } catch (err) {
     console.error('DB read error:', err);
-    return { users: [], teacherCodes: [], classes: [], sections: [], enrollments: [], exams: [], attempts: [], evidence: [], requests: [] };
+    return { users: [], teacherCodes: [], classes: [], sections: [], enrollments: [], exams: [], attempts: [], evidence: [], requests: [], results: [] };
   }
 }
 
@@ -988,11 +989,16 @@ app.post('/api/attempts/:id/submit', (req, res) => {
   let incorrectCount = 0;
   let unattemptedCount = 0;
 
+  const questionResults = [];
+
   if (exam && Array.isArray(exam.questions)) {
     maxScore = exam.questions.reduce((sum, q) => sum + (Number(q.marks) || 1), 0);
-    exam.questions.forEach(q => {
+    exam.questions.forEach((q, idx) => {
       const studentAns = attempt.answers[q.id];
       const correctOption = (q.options || []).find(opt => opt.isCorrect);
+      let isCorrect = false;
+      let obtained = 0;
+      let studentText = 'Unattempted';
 
       if (!studentAns || (typeof studentAns === 'object' && (!studentAns.selectedOptionIds || studentAns.selectedOptionIds.length === 0))) {
         unattemptedCount++;
@@ -1001,14 +1007,34 @@ app.post('/api/attempts/:id/submit', (req, res) => {
           ? studentAns
           : studentAns.selectedOptionIds ? studentAns.selectedOptionIds[0] : studentAns.value;
 
+        const selectedOptionObj = (q.options || []).find(opt => opt.id === selectedVal || opt.text === selectedVal);
+        studentText = selectedOptionObj ? selectedOptionObj.text : String(selectedVal || 'Answered');
+
         if (correctOption && (selectedVal === correctOption.id || selectedVal === correctOption.text)) {
-          totalScore += Number(q.marks) || 1;
+          isCorrect = true;
+          obtained = Number(q.marks) || 1;
+          totalScore += obtained;
           correctCount++;
         } else {
-          totalScore -= Number(q.negativeMarks) || 0;
+          isCorrect = false;
+          const neg = Number(q.negativeMarks) || 0;
+          totalScore -= neg;
+          obtained = neg > 0 ? -neg : 0;
           incorrectCount++;
         }
       }
+
+      questionResults.push({
+        questionId: q.id || `q-${idx + 1}`,
+        questionNumber: idx + 1,
+        questionText: q.text || `Question ${idx + 1}`,
+        type: q.type || 'mcq',
+        studentAnswer: studentText,
+        correctAnswer: correctOption ? correctOption.text : 'N/A',
+        isCorrect,
+        marks: Number(q.marks) || 1,
+        obtainedMarks: obtained
+      });
     });
   }
 
@@ -1016,7 +1042,43 @@ app.post('/api/attempts/:id/submit', (req, res) => {
   attempt.submittedAt = new Date().toISOString();
   attempt.score = Math.max(0, totalScore);
   attempt.totalMarks = maxScore;
+  attempt.questionResults = questionResults;
   attempt.updated_at = new Date().toISOString();
+
+  // Create or Update Result Record in db.results
+  const resultId = `res-${attempt.id}`;
+  let existingResult = db.results.find(r => r.attemptId === id);
+  const percentage = maxScore > 0 ? Math.round((attempt.score / maxScore) * 100) : 0;
+
+  const resultRecord = {
+    id: existingResult ? existingResult.id : resultId,
+    studentId: attempt.studentId,
+    studentName: attempt.studentName,
+    studentEmail: attempt.studentEmail,
+    teacherId: exam ? exam.teacherId : '',
+    teacherName: exam ? exam.teacherName : '',
+    classId: exam ? exam.classId : '',
+    className: exam ? exam.className : '',
+    sectionId: attempt.sectionId || (exam ? exam.sectionId : ''),
+    sectionName: exam ? exam.sectionName : 'Section A',
+    examId: attempt.examId,
+    examTitle: exam ? exam.title : attempt.examTitle,
+    attemptId: attempt.id,
+    obtainedMarks: attempt.score,
+    totalMarks: attempt.totalMarks,
+    percentage,
+    status: 'EVALUATED',
+    questionResults,
+    submittedAt: attempt.submittedAt,
+    createdAt: existingResult ? existingResult.createdAt : attempt.submittedAt,
+    updatedAt: new Date().toISOString()
+  };
+
+  if (existingResult) {
+    Object.assign(existingResult, resultRecord);
+  } else {
+    db.results.unshift(resultRecord);
+  }
 
   // Create submission evidence
   db.evidence.push({
@@ -1040,13 +1102,14 @@ app.post('/api/attempts/:id/submit', (req, res) => {
   res.json({
     success: true,
     attempt,
+    result: resultRecord,
     grading: {
       score: attempt.score,
       totalMarks: maxScore,
       correctCount,
       incorrectCount,
       unattemptedCount,
-      percentage: Math.round((attempt.score / maxScore) * 100)
+      percentage
     }
   });
 });
@@ -1302,6 +1365,50 @@ app.put('/api/requests/:id/action', (req, res) => {
 
   writeDB(db);
   res.json({ success: true, request });
+});
+
+// ── 11. Results & Marks Management (STEP 5 RESULTS LOGIC) ───────────────────
+
+app.get('/api/results', (req, res) => {
+  const { teacherId, studentId, examId, classId, sectionId } = req.query;
+  const db = readDB();
+  let list = db.results || [];
+
+  if (teacherId) {
+    list = list.filter(r => r.teacherId === teacherId);
+  }
+  if (studentId) {
+    list = list.filter(r => r.studentId === studentId);
+  }
+  if (examId) {
+    list = list.filter(r => r.examId === examId);
+  }
+  if (classId) {
+    list = list.filter(r => r.classId === classId);
+  }
+  if (sectionId) {
+    list = list.filter(r => r.sectionId === sectionId);
+  }
+
+  res.json({ success: true, results: list });
+});
+
+app.get('/api/results/:id', (req, res) => {
+  const { id } = req.params;
+  const { studentId, teacherId } = req.query;
+  const db = readDB();
+  const result = (db.results || []).find(r => r.id === id || r.attemptId === id);
+  if (!result) return res.status(404).json({ error: 'Result not found.' });
+
+  if (studentId && result.studentId !== studentId) {
+    return res.status(403).json({ error: 'Forbidden: You cannot access another candidate\'s examination results.' });
+  }
+
+  if (teacherId && result.teacherId !== teacherId) {
+    return res.status(403).json({ error: 'Forbidden: You cannot access results for another instructor\'s students.' });
+  }
+
+  res.json({ success: true, result });
 });
 
 // ── Start Express Server ──────────────────────────────────────────────────────
