@@ -537,6 +537,21 @@ app.get('/api/exams/:id', (req, res) => {
       }
     }
 
+    // Security Check: If student has a PENDING request for this exam, block direct access
+    const pendingReq = (db.requests || []).find(r => r.studentId === studentId && r.examId === id && r.status === 'PENDING');
+    if (pendingReq) {
+      return res.status(403).json({
+        error: 'This examination is currently locked pending review by your instructor.'
+      });
+    }
+
+    const rejectedReq = (db.requests || []).find(r => r.studentId === studentId && r.examId === id && r.status === 'REJECTED');
+    if (rejectedReq) {
+      return res.status(403).json({
+        error: 'Your request for this examination was rejected by your instructor.'
+      });
+    }
+
     // Sanitize questions for student payload: remove correct answer keys!
     const sanitizedQuestions = (exam.questions || []).map(q => {
       const sanitizedOptions = (q.options || []).map(opt => ({
@@ -839,7 +854,23 @@ app.post('/api/attempts', (req, res) => {
     return res.status(403).json({ error: 'Access Denied: You are not enrolled in the class section for this exam.' });
   }
 
-  // Check if existing in-progress attempt exists
+  // Security Check: If student has an active PENDING request, block starting/restarting
+  const pendingReq = (db.requests || []).find(r => r.studentId === studentId && r.examId === examId && r.status === 'PENDING');
+  if (pendingReq) {
+    return res.status(403).json({
+      error: 'You have a pending request for this examination. Please wait for your instructor to approve before continuing.'
+    });
+  }
+
+  // If request was REJECTED, block re-entry
+  const rejectedReq = (db.requests || []).find(r => r.studentId === studentId && r.examId === examId && r.status === 'REJECTED');
+  if (rejectedReq) {
+    return res.status(403).json({
+      error: 'Your request for this examination was rejected by your instructor.'
+    });
+  }
+
+  // Check if existing in-progress attempt exists (or approved for continuation)
   let existingAttempt = db.attempts.find(a => a.examId === examId && a.studentId === studentId && a.status === 'in_progress');
   if (existingAttempt) {
     return res.json({ success: true, attempt: existingAttempt });

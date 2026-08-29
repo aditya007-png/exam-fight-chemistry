@@ -47,6 +47,18 @@
   ],
   "classes": [
     {
+      "id": "cls-1788003726813-xtq4",
+      "name": "B.Tech CSE - Inorganic Chemistry II",
+      "code": "CSE-CHEM-402",
+      "teacher_id": "teacher-s4u-alok-1788003726781",
+      "teacher_name": "Prof. Alok Verma",
+      "academic_year": "2026-27",
+      "subject": "Chemistry",
+      "description": "",
+      "created_at": "2026-08-29T11:42:06.813Z",
+      "updated_at": "2026-08-29T11:42:06.813Z"
+    },
+    {
       "id": "cls-1788003182481-j7t7",
       "name": "B.Tech CSE - Organic Synthesis",
       "code": "CSE-CHEM-401",
@@ -217,6 +229,15 @@
   ],
   "sections": [
     {
+      "id": "sec-cls-1788003726813-xtq4-a",
+      "class_id": "cls-1788003726813-xtq4",
+      "className": "B.Tech CSE - Inorganic Chemistry II",
+      "name": "Section A",
+      "enrollment_code": "CSE--A4YEP",
+      "created_at": "2026-08-29T11:42:06.813Z",
+      "updated_at": "2026-08-29T11:42:06.813Z"
+    },
+    {
       "id": "sec-cls-1788003182481-j7t7-a",
       "class_id": "cls-1788003182481-j7t7",
       "className": "B.Tech CSE - Organic Synthesis",
@@ -380,6 +401,34 @@
     }
   ],
   "enrollments": [
+    {
+      "id": "enr-1788003726824-1a8l",
+      "studentId": "stu-s4u-rohit-1788003726781",
+      "studentName": "Rohit Sharma",
+      "studentEmail": "rohit.s4u.1788003726781@chem.edu",
+      "classId": "cls-1788003726813-xtq4",
+      "className": "B.Tech CSE - Inorganic Chemistry II",
+      "sectionId": "sec-cls-1788003726813-xtq4-a",
+      "sectionName": "Section A",
+      "teacherId": "teacher-s4u-alok-1788003726781",
+      "teacherName": "Prof. Alok Verma",
+      "joinedAt": "2026-08-29T11:42:06.824Z",
+      "status": "active"
+    },
+    {
+      "id": "enr-1788003726821-8tyt",
+      "studentId": "stu-s4u-aditya-1788003726781",
+      "studentName": "Aditya Kumar",
+      "studentEmail": "aditya.s4u.1788003726781@chem.edu",
+      "classId": "cls-1788003726813-xtq4",
+      "className": "B.Tech CSE - Inorganic Chemistry II",
+      "sectionId": "sec-cls-1788003726813-xtq4-a",
+      "sectionName": "Section A",
+      "teacherId": "teacher-s4u-alok-1788003726781",
+      "teacherName": "Prof. Alok Verma",
+      "joinedAt": "2026-08-29T11:42:06.821Z",
+      "status": "active"
+    },
     {
       "id": "enr-1788003182495-snuw",
       "studentId": "stu-step4-rohit-1788003182448",
@@ -676,6 +725,28 @@
     }
   ],
   "exams": [
+    {
+      "id": "exam-1788003726829-wgz1",
+      "title": "Thermodynamics & Equilibrium Test",
+      "topic": "General Chemistry",
+      "courseCode": "CSE-CHEM-402",
+      "courseName": "CSE-CHEM-402 — B.Tech CSE - Inorganic Chemistry II",
+      "teacherId": "teacher-s4u-alok-1788003726781",
+      "teacherName": "Prof. Alok Verma",
+      "classId": "cls-1788003726813-xtq4",
+      "className": "B.Tech CSE - Inorganic Chemistry II",
+      "sectionId": "sec-cls-1788003726813-xtq4-a",
+      "sectionName": "Section A",
+      "durationMinutes": 45,
+      "instructions": "Standard examination rules apply. Complete all questions before the timer expires.",
+      "totalQuestions": 0,
+      "totalMarks": 100,
+      "passingMarks": 40,
+      "status": "published",
+      "questions": [],
+      "created_at": "2026-08-29T11:42:06.829Z",
+      "updated_at": "2026-08-29T11:42:06.829Z"
+    },
     {
       "id": "exam-1788003182499-9lgg",
       "title": "Mid-Term Organic Chemistry Exam",
@@ -1514,6 +1585,27 @@
   ],
   "attempts": [
     {
+      "id": "att-1788003726833-7frw",
+      "examId": "exam-1788003726829-wgz1",
+      "examTitle": "Thermodynamics & Equilibrium Test",
+      "courseCode": "CSE-CHEM-402",
+      "className": "B.Tech CSE - Inorganic Chemistry II",
+      "studentId": "stu-s4u-aditya-1788003726781",
+      "studentName": "Aditya Kumar",
+      "studentEmail": "aditya.s4u.1788003726781@chem.edu",
+      "sectionId": "sec-cls-1788003726813-xtq4-a",
+      "status": "in_progress",
+      "score": null,
+      "totalMarks": 100,
+      "integrityScore": 100,
+      "answers": {},
+      "proctoringEvents": [],
+      "startedAt": "2026-08-29T11:42:06.833Z",
+      "submittedAt": null,
+      "created_at": "2026-08-29T11:42:06.833Z",
+      "updated_at": "2026-08-29T11:42:06.863Z"
+    },
+    {
       "id": "att-1788003182509-pizn",
       "examId": "exam-1788003182499-9lgg",
       "examTitle": "Mid-Term Organic Chemistry Exam",
@@ -1658,6 +1750,20 @@
   ],
   "evidence": [
     {
+      "id": "evi-1788003726869-knup",
+      "examId": "exam-1788003726829-wgz1",
+      "attemptId": "att-1788003726833-7frw",
+      "studentId": "stu-s4u-aditya-1788003726781",
+      "evidenceType": "room_scan",
+      "filePath": "/evidence/room_scan_attempt_a.webm",
+      "signedUrl": "",
+      "durationSeconds": 15,
+      "coverageDegrees": 360,
+      "metadata": {},
+      "recordedAt": "2026-08-29T11:42:06.869Z",
+      "createdAt": "2026-08-29T11:42:06.869Z"
+    },
+    {
       "id": "evi-1788002495543-82g8",
       "examId": "exam-1788002495506-plln",
       "attemptId": "att-1788002495532-ap6o",
@@ -1723,6 +1829,28 @@
     }
   ],
   "requests": [
+    {
+      "id": "req-1788003726837-x1oq",
+      "studentId": "stu-s4u-aditya-1788003726781",
+      "studentName": "Aditya Kumar",
+      "studentEmail": "aditya.s4u.1788003726781@chem.edu",
+      "teacherId": "teacher-s4u-alok-1788003726781",
+      "teacherName": "Prof. Alok Verma",
+      "classId": "cls-1788003726813-xtq4",
+      "className": "B.Tech CSE - Inorganic Chemistry II",
+      "sectionId": "sec-cls-1788003726813-xtq4-a",
+      "sectionName": "Section A",
+      "examId": "exam-1788003726829-wgz1",
+      "examTitle": "Thermodynamics & Equilibrium Test",
+      "attemptId": "att-1788003726833-7frw",
+      "requestType": "EXAM_EXITED",
+      "message": "Browser crashed unexpectedly on question 2. Please permit exam continuation.",
+      "status": "APPROVED",
+      "teacherResponse": "Approved. You may resume your existing examination attempt.",
+      "resolvedAt": "2026-08-29T11:42:06.863Z",
+      "createdAt": "2026-08-29T11:42:06.837Z",
+      "updatedAt": "2026-08-29T11:42:06.863Z"
+    },
     {
       "id": "req-1788003182514-b0wo",
       "studentId": "stu-step4-aditya-1788003182448",
