@@ -373,6 +373,20 @@ export const getStoredEnrollments = (filters?: {
     if (!raw) return [];
     let list: ClassEnrollment[] = JSON.parse(raw);
 
+    const users = getStoredUsers();
+    list = list.map((e) => {
+      const studentProfile = users.find(
+        (u) =>
+          u.id === e.studentId ||
+          (e.studentEmail && u.email?.toLowerCase() === e.studentEmail?.toLowerCase())
+      );
+      return {
+        ...e,
+        studentName: studentProfile?.full_name || e.studentName || 'Student',
+        studentEmail: studentProfile?.email || e.studentEmail || '',
+      };
+    });
+
     if (filters?.sectionId) {
       const targetSec = getSectionById(filters.sectionId);
       list = list.filter(

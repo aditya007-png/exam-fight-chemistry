@@ -21,6 +21,7 @@ import {
   fetchEnrollmentsFromDB,
   removeStudentFromSection,
 } from '../../lib/classService';
+import { fetchProfilesFromDB } from '../../lib/userService';
 import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
 import {
@@ -66,7 +67,12 @@ export const TeacherClassesPage: React.FC = () => {
   const [newSectionName, setNewSectionName] = useState('');
 
   const loadData = async () => {
+    await fetchProfilesFromDB();
+
     let clsList = getStoredClasses(teacherId);
+    if (clsList.length === 0) {
+      clsList = getStoredClasses();
+    }
     setClasses(clsList);
 
     if (teacherId) {
