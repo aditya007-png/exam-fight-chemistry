@@ -1,9 +1,9 @@
 // src/lib/examService.ts
-// Real PostgreSQL & Supabase Database Service for Examinations, Questions, Attempts, and Proctoring Records
+// Real PostgreSQL & REST Backend Service for Examinations, Questions, Attempts, and Proctoring Records
 import { supabase, isSupabaseConfigured } from './supabase';
 import { ExamItem } from '../types/dashboard';
 import { ChemQuestion } from '../types/question';
-import { ExamAttempt, ExamEvidence } from '../types/evidence';
+import { ExamAttempt } from '../types/evidence';
 
 const EXAMS_STORAGE_KEY = 'exam_fight_exams_v2';
 const QUESTIONS_STORAGE_KEY = 'exam_fight_exam_questions_v2';
@@ -34,7 +34,47 @@ export const saveStoredExams = (exams: ExamItem[]): void => {
 
 export const fetchExamsFromDB = async (teacherId?: string): Promise<ExamItem[]> => {
   try {
-    if (isSupabaseConfigured()) {
+    const res = await fetch(`/api/exams${teacherId ? `?teacherId=${teacherId}` : ''}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.exams)) {
+        const mapped: ExamItem[] = data.exams.map((d: any) => ({
+          id: d.id,
+          title: d.title,
+          topic: d.topic || 'General Chemistry',
+          courseCode: d.courseCode || 'CHEM101',
+          courseName: d.courseName || `${d.courseCode || 'CHEM101'} — Chemistry`,
+          teacherName: d.teacherName || 'Faculty Instructor',
+          teacherId: d.teacherId,
+          classId: d.classId,
+          className: d.className,
+          sectionId: d.sectionId,
+          sectionName: d.sectionName || 'Section A',
+          durationMinutes: d.durationMinutes || 60,
+          totalQuestions: d.totalQuestions || (d.questions ? d.questions.length : 10),
+          totalMarks: d.totalMarks || 100,
+          passingMarks: d.passingMarks || 40,
+          status: d.status || 'active',
+          scheduledStart: d.scheduledStart || new Date().toISOString(),
+          scheduledEnd: d.scheduledEnd || new Date(Date.now() + 3600000).toISOString(),
+          proctoringActive: true,
+        }));
+        saveStoredExams(mapped);
+
+        // Also cache questions for each exam
+        data.exams.forEach((ex: any) => {
+          if (Array.isArray(ex.questions) && ex.questions.length > 0) {
+            saveExamQuestions(ex.id, ex.questions);
+          }
+        });
+
+        return mapped;
+      }
+    }
+  } catch (err) {}
+
+  if (isSupabaseConfigured()) {
+    try {
       let query = supabase.from('exams').select('*, profiles:teacher_id(full_name), classes:class_id(name, code)');
       if (teacherId) {
         query = query.eq('teacher_id', teacherId);
@@ -65,9 +105,9 @@ export const fetchExamsFromDB = async (teacherId?: string): Promise<ExamItem[]> 
         saveStoredExams(mapped);
         return mapped;
       }
+    } catch (err) {
+      console.warn('DB fetchExams error:', err);
     }
-  } catch (err) {
-    console.warn('DB fetchExams error:', err);
   }
   return getStoredExams();
 };
@@ -145,7 +185,27 @@ export const createOrUpdateExam = async (
     questions.reduce((sum, q) => sum + (q.marks || 1), 0) ||
     100;
 
-  // 1. Insert into PostgreSQL Supabase DB if configured
+  // 1. Try Backend REST API
+  try {
+    const res = await fetch('/api/exams', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...examData,
+        id,
+        totalMarks,
+        questions,
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.exam) {
+        id = data.exam.id;
+      }
+    }
+  } catch (err) {}
+
+  // 2. Insert into PostgreSQL Supabase DB if configured
   if (isSupabaseConfigured() && examData.teacherId) {
     try {
       const { data: dbExam, error: dbErr } = await supabase.from('exams').upsert({
@@ -205,6 +265,10 @@ export const createOrUpdateExam = async (
 };
 
 export const deleteExam = async (examId: string): Promise<boolean> => {
+  try {
+    await fetch(`/api/exams/${examId}`, { method: 'DELETE' });
+  } catch {}
+
   if (isSupabaseConfigured()) {
     try {
       await supabase.from('exams').delete().eq('id', examId);
@@ -247,7 +311,18 @@ export const saveStoredAttempts = (attempts: ExamAttempt[]): void => {
 
 export const fetchAttemptsFromDB = async (): Promise<ExamAttempt[]> => {
   try {
-    if (isSupabaseConfigured()) {
+    const res = await fetch('/api/attempts');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.attempts)) {
+        saveStoredAttempts(data.attempts);
+        return data.attempts;
+      }
+    }
+  } catch (err) {}
+
+  if (isSupabaseConfigured()) {
+    try {
       const { data, error } = await supabase
         .from('exam_attempts')
         .select('*, exams:exam_id(title, classes:class_id(name, code)), profiles:student_id(full_name, email)');
@@ -277,11 +352,24 @@ export const fetchAttemptsFromDB = async (): Promise<ExamAttempt[]> => {
         saveStoredAttempts(mapped);
         return mapped;
       }
+    } catch (err) {
+      console.warn('DB fetchAttempts error:', err);
     }
-  } catch (err) {
-    console.warn('DB fetchAttempts error:', err);
   }
+
   return getAllStoredAttempts();
+};
+
+export const getAttemptsForStudent = (studentId: string): ExamAttempt[] => {
+  const attempts = getAllStoredAttempts();
+  return attempts.filter(
+    (a) => a.studentId === studentId || a.studentEmail?.toLowerCase() === studentId.toLowerCase()
+  );
+};
+
+export const getAttemptsForExam = (examId: string): ExamAttempt[] => {
+  const attempts = getAllStoredAttempts();
+  return attempts.filter((a) => a.examId === examId);
 };
 
 export const getAttemptById = (attemptId: string): ExamAttempt | null => {
@@ -289,79 +377,82 @@ export const getAttemptById = (attemptId: string): ExamAttempt | null => {
   return attempts.find((a) => a.id === attemptId) || null;
 };
 
-export const getAttemptsForExam = (examId: string): ExamAttempt[] => {
-  return getAllStoredAttempts().filter((a) => a.examId === examId);
-};
-
-export const getAttemptsForStudent = (studentEmailOrId: string): ExamAttempt[] => {
-  return getAllStoredAttempts().filter(
-    (a) =>
-      a.studentId === studentEmailOrId ||
-      a.studentEmail.toLowerCase() === studentEmailOrId.toLowerCase()
-  );
-};
-
-export const createOrUpdateAttempt = async (attempt: ExamAttempt): Promise<void> => {
-  if (isSupabaseConfigured() && attempt.studentId && !attempt.studentId.startsWith('user-')) {
-    try {
-      await supabase.from('exam_attempts').upsert({
-        id: attempt.id.length === 36 ? attempt.id : undefined,
-        exam_id: attempt.examId,
-        student_id: attempt.studentId,
-        status: attempt.status,
-        room_scan_completed: attempt.roomScanCompleted,
-        started_at: attempt.startedAt,
-        submitted_at: attempt.submittedAt,
-        score: attempt.score,
-        total_marks: attempt.totalMarks,
-        integrity_score: attempt.integrityScore,
-      });
-    } catch (err) {
-      console.warn('DB createOrUpdateAttempt error:', err);
-    }
-  }
-
+export const saveExamAttempt = (attempt: Partial<ExamAttempt> & { examId: string; studentId: string }): ExamAttempt => {
   const attempts = getAllStoredAttempts();
-  const existingIndex = attempts.findIndex((a) => a.id === attempt.id);
-  if (existingIndex >= 0) {
-    attempts[existingIndex] = attempt;
+  const id = attempt.id || `att-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+  const exam = getExamById(attempt.examId);
+
+  const newAttempt: ExamAttempt = {
+    id,
+    examId: attempt.examId,
+    examTitle: attempt.examTitle || exam?.title || 'Chemistry Examination',
+    courseCode: attempt.courseCode || exam?.courseCode || 'CHEM-101',
+    className: attempt.className || exam?.className || 'Class',
+    studentId: attempt.studentId,
+    studentName: attempt.studentName || 'Student Candidate',
+    studentEmail: attempt.studentEmail || '',
+    sectionId: attempt.sectionId || exam?.sectionId,
+    status: attempt.status || 'in_progress',
+    roomScanCompleted: attempt.roomScanCompleted || false,
+    startedAt: attempt.startedAt || new Date().toISOString(),
+    submittedAt: attempt.submittedAt || null,
+    score: attempt.score,
+    totalMarks: attempt.totalMarks || exam?.totalMarks || 100,
+    integrityScore: attempt.integrityScore !== undefined ? attempt.integrityScore : 100,
+    riskLevel:
+      attempt.integrityScore !== undefined && attempt.integrityScore < 70
+        ? 'HIGH'
+        : attempt.integrityScore !== undefined && attempt.integrityScore < 85
+        ? 'MEDIUM'
+        : 'LOW',
+    totalViolations: attempt.totalViolations || 0,
+    evidenceCount: attempt.evidenceCount || 1,
+    durationMinutes: attempt.durationMinutes || exam?.durationMinutes || 60,
+    createdAt: attempt.createdAt || new Date().toISOString(),
+  };
+
+  try {
+    fetch('/api/attempts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newAttempt),
+    });
+  } catch {}
+
+  const index = attempts.findIndex((a) => a.id === id);
+  if (index >= 0) {
+    attempts[index] = newAttempt;
   } else {
-    attempts.unshift(attempt);
+    attempts.unshift(newAttempt);
   }
+
   saveStoredAttempts(attempts);
+  return newAttempt;
 };
 
-export const getAttemptEvidence = (attemptId: string): ExamEvidence | null => {
+export const createOrUpdateAttempt = (attempt: ExamAttempt): ExamAttempt => {
+  return saveExamAttempt(attempt);
+};
+
+export const getAttemptEvidence = (attemptId: string): any => {
   try {
     const raw = localStorage.getItem(`${EVIDENCE_STORAGE_KEY}_${attemptId}`);
     if (!raw) return null;
-    return JSON.parse(raw) as ExamEvidence;
-  } catch (err) {
-    console.error(`Error reading evidence for attempt ${attemptId}:`, err);
+    return JSON.parse(raw);
+  } catch {
     return null;
   }
 };
 
-export const saveAttemptEvidence = async (attemptId: string, evidence: ExamEvidence): Promise<void> => {
-  if (isSupabaseConfigured() && evidence.studentId && !evidence.studentId.startsWith('user-')) {
-    try {
-      await supabase.from('exam_evidence').insert({
-        exam_id: evidence.examId,
-        attempt_id: attemptId,
-        student_id: evidence.studentId,
-        evidence_type: evidence.evidenceType || 'proctoring_event',
-        file_path: evidence.filePath || 'evidence/log.json',
-        duration_seconds: evidence.durationSeconds || 0,
-        metadata: evidence.metadata || {},
-      });
-    } catch (err) {
-      console.warn('DB saveAttemptEvidence error:', err);
-    }
-  }
-
+export const saveAttemptEvidence = (attemptId: string, evidenceData: any): void => {
   try {
-    localStorage.setItem(`${EVIDENCE_STORAGE_KEY}_${attemptId}`, JSON.stringify(evidence));
+    localStorage.setItem(`${EVIDENCE_STORAGE_KEY}_${attemptId}`, JSON.stringify(evidenceData));
+    fetch('/api/evidence', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ attemptId, ...evidenceData }),
+    }).catch(() => {});
   } catch (err) {
-    console.error(`Error saving evidence for attempt ${attemptId}:`, err);
+    console.error('Error saving evidence:', err);
   }
 };

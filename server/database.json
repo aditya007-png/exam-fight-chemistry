@@ -9,23 +9,24 @@
       "updated_at": "2026-08-29T10:52:59.613Z"
     },
     {
-      "id": "teacher-001",
-      "email": "teacher@examfight.chem",
-      "full_name": "Dr. Jatin Sharma",
+      "id": "user-1788001010143-rrk4",
+      "email": "sd@gmail.com",
+      "full_name": "SD",
       "role": "teacher",
-      "created_at": "2026-08-29T10:52:59.613Z",
-      "updated_at": "2026-08-29T10:52:59.613Z"
-    },
-    {
-      "id": "student-001",
-      "email": "student@examfight.chem",
-      "full_name": "Aditya Student",
-      "role": "student",
-      "created_at": "2026-08-29T10:52:59.613Z",
-      "updated_at": "2026-08-29T10:52:59.613Z"
+      "created_at": "2026-08-29T10:56:50.143Z",
+      "updated_at": "2026-08-29T10:56:50.143Z"
     }
   ],
   "teacherCodes": [
+    {
+      "id": "code-1788000993817",
+      "code": "CHEM-FACULTY-2026-8CNX",
+      "created_for": "ASD",
+      "is_used": true,
+      "created_at": "2026-08-29T10:56:33.817Z",
+      "expires_at": null,
+      "used_by": "SD@GMAIL.COM"
+    },
     {
       "id": "code-001",
       "code": "CHEM-FACULTY-2026-XP9R",
@@ -35,6 +36,18 @@
     }
   ],
   "classes": [
+    {
+      "id": "cls-1788000960138-sojy",
+      "name": "Asdfghj",
+      "code": "ASDZXFCGHBJ",
+      "teacher_id": "user-1788000414176-kr24",
+      "teacher_name": "JSI",
+      "academic_year": "2026-27",
+      "subject": "Chemistry",
+      "description": "",
+      "created_at": "2026-08-29T10:56:00.138Z",
+      "updated_at": "2026-08-29T10:56:00.138Z"
+    },
     {
       "id": "cls-1788000858811-fg9l",
       "name": "Physical Chemistry II",
@@ -58,9 +71,30 @@
       "description": "Comprehensive general and physical chemistry curriculum",
       "created_at": "2026-08-29T10:52:59.613Z",
       "updated_at": "2026-08-29T10:52:59.613Z"
+    },
+    {
+      "id": "cls-1788000950503-kazk",
+      "name": "Academic Class (SZDF)",
+      "code": "SZDF",
+      "teacher_id": "teacher-001",
+      "teacher_name": "Dr. Jatin Sharma",
+      "academic_year": "2026-27",
+      "subject": "Chemistry",
+      "description": "Academic Chemistry Course",
+      "created_at": "2026-08-29T10:55:50.503Z",
+      "updated_at": "2026-08-29T10:55:50.503Z"
     }
   ],
   "sections": [
+    {
+      "id": "sec-cls-1788000960138-sojy-a",
+      "class_id": "cls-1788000960138-sojy",
+      "className": "Asdfghj",
+      "name": "Section A",
+      "enrollment_code": "ASDZ-AWMUD",
+      "created_at": "2026-08-29T10:56:00.138Z",
+      "updated_at": "2026-08-29T10:56:00.138Z"
+    },
     {
       "id": "sec-cls-1788000858811-fg9l-a",
       "class_id": "cls-1788000858811-fg9l",
@@ -78,9 +112,32 @@
       "enrollment_code": "CHEM-A8X9",
       "created_at": "2026-08-29T10:52:59.613Z",
       "updated_at": "2026-08-29T10:52:59.613Z"
+    },
+    {
+      "id": "sec-cls-1788000950503-kazk-SZDFSNYDY",
+      "class_id": "cls-1788000950503-kazk",
+      "className": "Academic Class (SZDF)",
+      "name": "Section S",
+      "enrollment_code": "SZDF-SNYDY",
+      "created_at": "2026-08-29T10:55:50.503Z",
+      "updated_at": "2026-08-29T10:55:50.503Z"
     }
   ],
   "enrollments": [
+    {
+      "id": "enr-1788000950503-pkdr",
+      "studentId": "user-1788000384767-uzgt",
+      "studentName": "Aditya",
+      "studentEmail": "aditya22008mk@gmail.com",
+      "classId": "cls-1788000950503-kazk",
+      "className": "Academic Class (SZDF)",
+      "sectionId": "sec-cls-1788000950503-kazk-SZDFSNYDY",
+      "sectionName": "Section S",
+      "teacherId": "teacher-001",
+      "teacherName": "Dr. Jatin Sharma",
+      "joinedAt": "2026-08-29T10:55:50.503Z",
+      "status": "active"
+    },
     {
       "id": "enr-1788000882415-6hck",
       "studentId": "stu-test-77",

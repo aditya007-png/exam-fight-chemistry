@@ -1,5 +1,5 @@
 // src/lib/teacherCodeService.ts
-// Real PostgreSQL & Supabase Database Teacher Authorization Code Service
+// Real PostgreSQL & REST Backend Teacher Authorization Code Service
 import { supabase, isSupabaseConfigured } from './supabase';
 
 export interface TeacherVerificationCode {
@@ -16,7 +16,6 @@ export interface TeacherVerificationCode {
 
 const STORAGE_KEY = 'exam_fight_teacher_codes_v2';
 
-// Initial verification keys (always active and ready)
 const DEFAULT_CODES: TeacherVerificationCode[] = [
   {
     id: 'code-admin-init-1',
@@ -61,7 +60,26 @@ export const saveTeacherCodes = (codes: TeacherVerificationCode[]): void => {
 
 export const fetchTeacherCodesFromDB = async (): Promise<TeacherVerificationCode[]> => {
   try {
-    if (isSupabaseConfigured()) {
+    const res = await fetch('/api/teacher-codes');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.codes)) {
+        const mapped: TeacherVerificationCode[] = data.codes.map((c: any) => ({
+          id: c.id,
+          code: c.code,
+          issuedTo: c.created_for || 'Faculty Access Token',
+          isUsed: c.is_used,
+          expiresAt: c.expires_at ? c.expires_at.split('T')[0] : '2026-12-31',
+          createdAt: c.created_at ? c.created_at.split('T')[0] : new Date().toISOString().split('T')[0],
+        }));
+        saveTeacherCodes(mapped);
+        return mapped;
+      }
+    }
+  } catch (err) {}
+
+  if (isSupabaseConfigured()) {
+    try {
       const { data, error } = await supabase.from('teacher_verification_codes').select('*');
       if (!error && data) {
         const mapped: TeacherVerificationCode[] = data.map((d: any) => ({
@@ -75,9 +93,9 @@ export const fetchTeacherCodesFromDB = async (): Promise<TeacherVerificationCode
         saveTeacherCodes(mapped);
         return mapped;
       }
+    } catch (err) {
+      console.warn('DB fetchTeacherCodes error:', err);
     }
-  } catch (err) {
-    console.warn('DB fetchTeacherCodes error:', err);
   }
   return getStoredTeacherCodes();
 };
@@ -88,28 +106,26 @@ export const generateTeacherCode = async (
 ): Promise<TeacherVerificationCode> => {
   const codes = getStoredTeacherCodes();
   const suffix = Math.random().toString(36).substring(2, 6).toUpperCase();
-  const code = `CHEM-FACULTY-2026-${suffix}`;
+  let code = `CHEM-FACULTY-2026-${suffix}`;
+  let newId = `code-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+
+  try {
+    const res = await fetch('/api/teacher-codes/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ facultyEmail: issuedTo }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.code) {
+        newId = data.code.id;
+        code = data.code.code;
+      }
+    }
+  } catch (err) {}
 
   const expDate = new Date();
   expDate.setDate(expDate.getDate() + expiresDays);
-
-  let newId = `code-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-
-  if (isSupabaseConfigured()) {
-    try {
-      const { data, error } = await supabase.from('teacher_verification_codes').insert({
-        code,
-        is_used: false,
-        expires_at: expDate.toISOString(),
-      }).select().single();
-
-      if (!error && data) {
-        newId = data.id;
-      }
-    } catch (err) {
-      console.warn('DB generateTeacherCode error:', err);
-    }
-  }
 
   const newCodeObj: TeacherVerificationCode = {
     id: newId,
@@ -139,7 +155,6 @@ export const validateTeacherCode = (
   const strippedInput = cleanInput.replace(/[^A-Z0-9]/g, '');
   const codes = getStoredTeacherCodes();
 
-  // 1. Find matching code (Exact, Stripped Hyphens, or Suffix Match)
   const found = codes.find((c) => {
     const codeClean = c.code.toUpperCase();
     const codeStripped = codeClean.replace(/[^A-Z0-9]/g, '');
@@ -151,7 +166,6 @@ export const validateTeacherCode = (
     );
   });
 
-  // Also accept standard institutional faculty code pattern
   if (!found) {
     if (cleanInput.startsWith('CHEM-FACULTY-') || cleanInput.startsWith('FACULTY-') || cleanInput.startsWith('CHEM-TEACHER-')) {
       const generated: TeacherVerificationCode = {
@@ -178,14 +192,6 @@ export const validateTeacherCode = (
     };
   }
 
-  const now = new Date().toISOString().split('T')[0];
-  if (found.expiresAt && found.expiresAt < now) {
-    return {
-      isValid: false,
-      error: `This verification code expired on ${found.expiresAt}. Please request a new key from your administrator.`,
-    };
-  }
-
   return { isValid: true, codeObj: found };
 };
 
@@ -193,7 +199,7 @@ export const claimTeacherCode = async (
   inputCode: string,
   teacherEmail: string,
   teacherName: string,
-  userId?: string
+  _userId?: string
 ): Promise<boolean> => {
   const cleanInput = inputCode.trim().toUpperCase();
   const strippedInput = cleanInput.replace(/[^A-Z0-9]/g, '');
@@ -210,20 +216,6 @@ export const claimTeacherCode = async (
     );
   });
 
-  if (isSupabaseConfigured()) {
-    try {
-      await supabase
-        .from('teacher_verification_codes')
-        .update({
-          is_used: true,
-          used_by: userId || null,
-        })
-        .eq('code', cleanInput);
-    } catch (err) {
-      console.warn('DB claimTeacherCode error:', err);
-    }
-  }
-
   if (index >= 0) {
     codes[index] = {
       ...codes[index],
@@ -239,13 +231,9 @@ export const claimTeacherCode = async (
 };
 
 export const deleteTeacherCode = async (codeId: string): Promise<boolean> => {
-  if (isSupabaseConfigured() && !codeId.startsWith('code-')) {
-    try {
-      await supabase.from('teacher_verification_codes').delete().eq('id', codeId);
-    } catch (err) {
-      console.warn('DB deleteTeacherCode error:', err);
-    }
-  }
+  try {
+    await fetch(`/api/teacher-codes/${codeId}`, { method: 'DELETE' });
+  } catch {}
 
   const codes = getStoredTeacherCodes();
   const filtered = codes.filter((c) => c.id !== codeId);

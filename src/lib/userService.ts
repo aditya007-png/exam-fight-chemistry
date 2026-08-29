@@ -1,5 +1,5 @@
 // src/lib/userService.ts
-// Real PostgreSQL & Supabase Database User Directory Service
+// Real PostgreSQL & REST Backend User Directory Service
 import { supabase, isSupabaseConfigured } from './supabase';
 import { UserProfile, UserRole } from '../types/auth';
 
@@ -8,7 +8,7 @@ const STORAGE_KEY = 'exam_fight_user_directory_v2';
 export const DEFAULT_ADMIN: UserProfile = {
   id: 'admin-001',
   email: 'admin@examfight.chem',
-  full_name: 'Administrator',
+  full_name: 'Institutional Administrator',
   role: 'admin',
   created_at: '2026-01-01T00:00:00.000Z',
   updated_at: new Date().toISOString(),
@@ -36,10 +36,21 @@ export const getStoredUsers = (): UserProfile[] => {
   }
 };
 
-// Fetch real profiles from PostgreSQL database
+// Fetch real profiles from Backend REST API and PostgreSQL database
 export const fetchProfilesFromDB = async (): Promise<UserProfile[]> => {
   try {
-    if (isSupabaseConfigured()) {
+    const res = await fetch('/api/users');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.users)) {
+        saveStoredUsers(data.users);
+        return data.users;
+      }
+    }
+  } catch (err) {}
+
+  if (isSupabaseConfigured()) {
+    try {
       const { data, error } = await supabase.from('profiles').select('*');
       if (!error && data) {
         const mapped: UserProfile[] = data.map((d: any) => ({
@@ -54,10 +65,11 @@ export const fetchProfilesFromDB = async (): Promise<UserProfile[]> => {
         saveStoredUsers(mapped);
         return mapped;
       }
+    } catch (err) {
+      console.warn('DB fetchProfiles error:', err);
     }
-  } catch (err) {
-    console.warn('DB fetchProfiles error:', err);
   }
+
   return getStoredUsers();
 };
 
@@ -72,6 +84,26 @@ export const saveStoredUsers = (users: UserProfile[]): void => {
 
 // Update name of any user (by Admin, Teacher, or self)
 export const updateUserName = async (userId: string, newName: string): Promise<UserProfile | null> => {
+  try {
+    const res = await fetch(`/api/users/${userId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ full_name: newName.trim() }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.user) {
+        const users = getStoredUsers();
+        const index = users.findIndex((u) => u.id === userId);
+        if (index >= 0) {
+          users[index] = data.user;
+          saveStoredUsers(users);
+        }
+        return data.user;
+      }
+    }
+  } catch (err) {}
+
   if (isSupabaseConfigured() && !userId.startsWith('user-')) {
     try {
       await supabase.from('profiles').update({
@@ -100,6 +132,10 @@ export const updateUserName = async (userId: string, newName: string): Promise<U
 
 // Delete a user (Admin capability)
 export const deleteUser = async (userId: string): Promise<boolean> => {
+  try {
+    await fetch(`/api/users/${userId}`, { method: 'DELETE' });
+  } catch {}
+
   if (isSupabaseConfigured() && !userId.startsWith('user-')) {
     try {
       await supabase.from('profiles').delete().eq('id', userId);
@@ -123,7 +159,6 @@ export const createUser = (
 ): UserProfile => {
   const users = getStoredUsers();
   
-  // Check if user already exists
   const existing = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
   if (existing) {
     return existing;
