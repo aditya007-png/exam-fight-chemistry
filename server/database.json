@@ -1,0 +1,269 @@
+{
+  "users": [
+    {
+      "id": "admin-001",
+      "email": "admin@examfight.chem",
+      "full_name": "Institutional Administrator",
+      "role": "admin",
+      "created_at": "2026-08-29T10:52:59.611Z",
+      "updated_at": "2026-08-29T10:52:59.613Z"
+    },
+    {
+      "id": "teacher-001",
+      "email": "teacher@examfight.chem",
+      "full_name": "Dr. Jatin Sharma",
+      "role": "teacher",
+      "created_at": "2026-08-29T10:52:59.613Z",
+      "updated_at": "2026-08-29T10:52:59.613Z"
+    },
+    {
+      "id": "student-001",
+      "email": "student@examfight.chem",
+      "full_name": "Aditya Student",
+      "role": "student",
+      "created_at": "2026-08-29T10:52:59.613Z",
+      "updated_at": "2026-08-29T10:52:59.613Z"
+    }
+  ],
+  "teacherCodes": [
+    {
+      "id": "code-001",
+      "code": "CHEM-FACULTY-2026-XP9R",
+      "is_used": false,
+      "created_at": "2026-08-29T10:52:59.613Z",
+      "expires_at": null
+    }
+  ],
+  "classes": [
+    {
+      "id": "cls-1788000858811-fg9l",
+      "name": "Physical Chemistry II",
+      "code": "CHEM202",
+      "teacher_id": "teacher-001",
+      "teacher_name": "Dr. Jatin Sharma",
+      "academic_year": "2026-27",
+      "subject": "Chemistry",
+      "description": "Quantum and kinetics",
+      "created_at": "2026-08-29T10:54:18.811Z",
+      "updated_at": "2026-08-29T10:54:18.811Z"
+    },
+    {
+      "id": "cls-chem-101",
+      "name": "General Chemistry 2026",
+      "code": "CHEM101",
+      "teacher_id": "teacher-001",
+      "teacher_name": "Dr. Jatin Sharma",
+      "academic_year": "2026-27",
+      "subject": "Chemistry",
+      "description": "Comprehensive general and physical chemistry curriculum",
+      "created_at": "2026-08-29T10:52:59.613Z",
+      "updated_at": "2026-08-29T10:52:59.613Z"
+    }
+  ],
+  "sections": [
+    {
+      "id": "sec-cls-1788000858811-fg9l-a",
+      "class_id": "cls-1788000858811-fg9l",
+      "className": "Physical Chemistry II",
+      "name": "Section A",
+      "enrollment_code": "CHEM-ADA5S",
+      "created_at": "2026-08-29T10:54:18.811Z",
+      "updated_at": "2026-08-29T10:54:18.811Z"
+    },
+    {
+      "id": "sec-chem-101-a",
+      "class_id": "cls-chem-101",
+      "className": "General Chemistry 2026",
+      "name": "Section A",
+      "enrollment_code": "CHEM-A8X9",
+      "created_at": "2026-08-29T10:52:59.613Z",
+      "updated_at": "2026-08-29T10:52:59.613Z"
+    }
+  ],
+  "enrollments": [
+    {
+      "id": "enr-1788000882415-6hck",
+      "studentId": "stu-test-77",
+      "studentName": "Aditya Candidate",
+      "studentEmail": "student@chem.edu",
+      "classId": "cls-1788000858811-fg9l",
+      "className": "Physical Chemistry II",
+      "sectionId": "sec-cls-1788000858811-fg9l-a",
+      "sectionName": "Section A",
+      "teacherId": "teacher-001",
+      "teacherName": "Dr. Jatin Sharma",
+      "joinedAt": "2026-08-29T10:54:42.415Z",
+      "status": "active"
+    }
+  ],
+  "exams": [
+    {
+      "id": "exam-sample-001",
+      "title": "Chemical Kinetics & Thermodynamics Midterm",
+      "courseCode": "CHEM101",
+      "courseName": "CHEM101 � General Chemistry 2026",
+      "teacherId": "teacher-001",
+      "teacherName": "Dr. Jatin Sharma",
+      "classId": "cls-chem-101",
+      "className": "General Chemistry 2026",
+      "sectionId": "sec-chem-101-a",
+      "sectionName": "Section A",
+      "durationMinutes": 60,
+      "totalQuestions": 5,
+      "totalMarks": 20,
+      "passingMarks": 8,
+      "status": "active",
+      "questions": [
+        {
+          "id": "q-1",
+          "text": "What is the SI unit of the rate constant for a first-order reaction?",
+          "type": "mcq",
+          "options": [
+            {
+              "id": "opt-1",
+              "text": "s?�",
+              "isCorrect": true
+            },
+            {
+              "id": "opt-2",
+              "text": "mol L?� s?�",
+              "isCorrect": false
+            },
+            {
+              "id": "opt-3",
+              "text": "L mol?� s?�",
+              "isCorrect": false
+            },
+            {
+              "id": "opt-4",
+              "text": "mol?� L� s?�",
+              "isCorrect": false
+            }
+          ],
+          "marks": 4,
+          "negativeMarks": 1
+        },
+        {
+          "id": "q-2",
+          "text": "Which law states that the total enthalpy change of a reaction is the sum of all changes?",
+          "type": "mcq",
+          "options": [
+            {
+              "id": "opt-1",
+              "text": "Hess's Law",
+              "isCorrect": true
+            },
+            {
+              "id": "opt-2",
+              "text": "Raoult's Law",
+              "isCorrect": false
+            },
+            {
+              "id": "opt-3",
+              "text": "Henry's Law",
+              "isCorrect": false
+            },
+            {
+              "id": "opt-4",
+              "text": "Le Chatelier's Principle",
+              "isCorrect": false
+            }
+          ],
+          "marks": 4,
+          "negativeMarks": 1
+        },
+        {
+          "id": "q-3",
+          "text": "What is the oxidation state of Chromium in Potassium Dichromate (K2Cr2O7)?",
+          "type": "mcq",
+          "options": [
+            {
+              "id": "opt-1",
+              "text": "+6",
+              "isCorrect": true
+            },
+            {
+              "id": "opt-2",
+              "text": "+3",
+              "isCorrect": false
+            },
+            {
+              "id": "opt-3",
+              "text": "+4",
+              "isCorrect": false
+            },
+            {
+              "id": "opt-4",
+              "text": "+2",
+              "isCorrect": false
+            }
+          ],
+          "marks": 4,
+          "negativeMarks": 1
+        },
+        {
+          "id": "q-4",
+          "text": "Which orbital has a spherical shape?",
+          "type": "mcq",
+          "options": [
+            {
+              "id": "opt-1",
+              "text": "s-orbital",
+              "isCorrect": true
+            },
+            {
+              "id": "opt-2",
+              "text": "p-orbital",
+              "isCorrect": false
+            },
+            {
+              "id": "opt-3",
+              "text": "d-orbital",
+              "isCorrect": false
+            },
+            {
+              "id": "opt-4",
+              "text": "f-orbital",
+              "isCorrect": false
+            }
+          ],
+          "marks": 4,
+          "negativeMarks": 1
+        },
+        {
+          "id": "q-5",
+          "text": "At standard temperature and pressure (STP), what volume does 1 mole of an ideal gas occupy?",
+          "type": "mcq",
+          "options": [
+            {
+              "id": "opt-1",
+              "text": "22.4 Liters",
+              "isCorrect": true
+            },
+            {
+              "id": "opt-2",
+              "text": "24.8 Liters",
+              "isCorrect": false
+            },
+            {
+              "id": "opt-3",
+              "text": "11.2 Liters",
+              "isCorrect": false
+            },
+            {
+              "id": "opt-4",
+              "text": "44.8 Liters",
+              "isCorrect": false
+            }
+          ],
+          "marks": 4,
+          "negativeMarks": 1
+        }
+      ],
+      "created_at": "2026-08-29T10:52:59.613Z",
+      "updated_at": "2026-08-29T10:52:59.613Z"
+    }
+  ],
+  "attempts": [],
+  "evidence": []
+}

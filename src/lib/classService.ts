@@ -1,5 +1,5 @@
 // src/lib/classService.ts
-// Real PostgreSQL & Supabase Database Service for Classes, Sections, and Student Enrollments
+// Real Database & REST API Service for Classes, Sections, and Student Enrollments
 import { supabase, isSupabaseConfigured } from './supabase';
 import { AcademicClass, AcademicSection, ClassEnrollment } from '../types/academic';
 import { getStoredUsers, getTeachers } from './userService';
@@ -34,7 +34,7 @@ export const resolveTeacherName = (teacherId?: string, fallbackName?: string): s
   } catch (err) {
     console.warn('resolveTeacherName error:', err);
   }
-  return fallbackName || 'Faculty Instructor';
+  return fallbackName || 'Dr. Jatin Sharma';
 };
 
 export const generateEnrollmentCode = (classCode: string, sectionName: string): string => {
@@ -42,6 +42,14 @@ export const generateEnrollmentCode = (classCode: string, sectionName: string): 
   const secLetter = sectionName.replace(/[^a-zA-Z0-9]/g, '').substring(0, 1).toUpperCase() || 'A';
   const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
   return `${prefix}-${secLetter}${randomSuffix}`;
+};
+
+const fuzzyNormalize = (str: string): string => {
+  return (str || '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '')
+    .replace(/O/g, '0')
+    .replace(/[IL]/g, '1');
 };
 
 // ── 2. Classes Database Layer ────────────────────────────────────────────────
@@ -70,29 +78,52 @@ export const saveStoredClasses = (classes: AcademicClass[]): void => {
 
 export const fetchClassesFromDB = async (teacherId?: string): Promise<AcademicClass[]> => {
   try {
-    if (isSupabaseConfigured()) {
-      let query = supabase.from('classes').select('*, profiles:teacher_id(full_name, email)');
-      if (teacherId && !teacherId.startsWith('user-')) {
-        query = query.eq('teacher_id', teacherId);
-      }
-      const { data, error } = await query;
-      if (!error && data) {
-        const mapped: AcademicClass[] = data.map((d: any) => ({
-          id: d.id,
-          teacherId: d.teacher_id,
-          teacherName: resolveTeacherName(d.teacher_id, d.profiles?.full_name),
-          name: d.name,
-          classCode: d.code,
-          academicYear: d.academic_year || '2026-27',
-          description: d.description || '',
-          createdAt: d.created_at,
+    // 1. Try REST API server
+    const apiRes = await fetch(`/api/classes${teacherId ? `?teacherId=${teacherId}` : ''}`);
+    if (apiRes.ok) {
+      const data = await apiRes.json();
+      if (data.success && Array.isArray(data.classes)) {
+        const mapped: AcademicClass[] = data.classes.map((c: any) => ({
+          id: c.id,
+          teacherId: c.teacher_id,
+          teacherName: resolveTeacherName(c.teacher_id, c.teacher_name),
+          name: c.name,
+          classCode: c.code,
+          academicYear: c.academic_year || '2026-27',
+          description: c.description || '',
+          createdAt: c.created_at,
         }));
         saveStoredClasses(mapped);
         return mapped;
       }
     }
   } catch (err) {
-    console.warn('DB fetch classes fallback:', err);
+    // Fallback to Supabase if configured
+    if (isSupabaseConfigured()) {
+      try {
+        let query = supabase.from('classes').select('*, profiles:teacher_id(full_name, email)');
+        if (teacherId && !teacherId.startsWith('user-')) {
+          query = query.eq('teacher_id', teacherId);
+        }
+        const { data, error } = await query;
+        if (!error && data) {
+          const mapped: AcademicClass[] = data.map((d: any) => ({
+            id: d.id,
+            teacherId: d.teacher_id,
+            teacherName: resolveTeacherName(d.teacher_id, d.profiles?.full_name),
+            name: d.name,
+            classCode: d.code,
+            academicYear: d.academic_year || '2026-27',
+            description: d.description || '',
+            createdAt: d.created_at,
+          }));
+          saveStoredClasses(mapped);
+          return mapped;
+        }
+      } catch (dbErr) {
+        console.warn('DB fetch classes fallback:', dbErr);
+      }
+    }
   }
   return getStoredClasses(teacherId);
 };
@@ -112,31 +143,64 @@ export const createClass = async (
 ): Promise<AcademicClass> => {
   const cleanCode = classCode.trim().toUpperCase();
   let newClassId = `cls-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+  let sectionA: AcademicSection | null = null;
 
-  // 1. Write to PostgreSQL Database via Supabase if configured
-  if (isSupabaseConfigured() && teacherId && !teacherId.startsWith('user-')) {
-    try {
-      const { data, error } = await supabase.from('classes').insert({
+  // 1. Try Backend REST API
+  try {
+    const res = await fetch('/api/classes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        teacherId,
+        teacherName,
         name: name.trim(),
-        code: cleanCode,
-        teacher_id: teacherId,
-        subject: 'Chemistry',
-        academic_year: academicYear.trim() || '2026-27',
+        classCode: cleanCode,
+        academicYear: academicYear.trim() || '2026-27',
         description: description?.trim() || '',
-      }).select().single();
-
-      if (!error && data) {
-        newClassId = data.id;
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.class) {
+        newClassId = data.class.id;
+        if (data.section) {
+          sectionA = {
+            id: data.section.id,
+            classId: data.section.class_id,
+            className: data.section.className || name.trim(),
+            name: data.section.name,
+            enrollmentCode: data.section.enrollment_code,
+            createdAt: data.section.created_at,
+          };
+        }
       }
-    } catch (err) {
-      console.warn('DB createClass fallback:', err);
+    }
+  } catch (apiErr) {
+    // 2. Write to PostgreSQL Database via Supabase if configured
+    if (isSupabaseConfigured() && teacherId && !teacherId.startsWith('user-')) {
+      try {
+        const { data, error } = await supabase.from('classes').insert({
+          name: name.trim(),
+          code: cleanCode,
+          teacher_id: teacherId,
+          subject: 'Chemistry',
+          academic_year: academicYear.trim() || '2026-27',
+          description: description?.trim() || '',
+        }).select().single();
+
+        if (!error && data) {
+          newClassId = data.id;
+        }
+      } catch (err) {
+        console.warn('DB createClass fallback:', err);
+      }
     }
   }
 
   const newClass: AcademicClass = {
     id: newClassId,
     teacherId,
-    teacherName,
+    teacherName: resolveTeacherName(teacherId, teacherName),
     name: name.trim(),
     classCode: cleanCode,
     academicYear: academicYear.trim() || '2026-27',
@@ -144,18 +208,26 @@ export const createClass = async (
     createdAt: new Date().toISOString(),
   };
 
-  // 2. Update persistent cache
   const classes = getStoredClasses();
   classes.unshift(newClass);
   saveStoredClasses(classes);
 
-  // 3. Automatically create initial Section A with database persistence
-  await createSection(newClass.id, newClass.name, 'Section A', newClass.classCode);
+  if (sectionA) {
+    const sections = getStoredSections();
+    sections.unshift(sectionA);
+    saveStoredSections(sections);
+  } else {
+    await createSection(newClass.id, newClass.name, 'Section A', newClass.classCode);
+  }
 
   return newClass;
 };
 
 export const deleteClass = async (classId: string): Promise<void> => {
+  try {
+    await fetch(`/api/classes/${classId}`, { method: 'DELETE' });
+  } catch {}
+
   if (isSupabaseConfigured() && !classId.startsWith('cls-')) {
     try {
       await supabase.from('classes').delete().eq('id', classId);
@@ -200,37 +272,49 @@ export const saveStoredSections = (sections: AcademicSection[]): void => {
 
 export const fetchSectionsFromDB = async (classId?: string): Promise<AcademicSection[]> => {
   try {
-    if (isSupabaseConfigured()) {
-      let query = supabase.from('sections').select('*, classes:class_id(name, code)');
-      if (classId && !classId.startsWith('cls-')) {
-        query = query.eq('class_id', classId);
-      }
-      const { data, error } = await query;
-      if (!error && data) {
-        const mapped: AcademicSection[] = data.map((d: any) => ({
-          id: d.id,
-          classId: d.class_id,
-          className: d.classes?.name || 'Class',
-          name: d.name,
-          enrollmentCode: d.enrollment_code,
-          createdAt: d.created_at,
+    // 1. Try REST API
+    const res = await fetch(`/api/sections${classId ? `?classId=${classId}` : ''}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.sections)) {
+        const mapped: AcademicSection[] = data.sections.map((s: any) => ({
+          id: s.id,
+          classId: s.class_id,
+          className: s.className || 'Class',
+          name: s.name,
+          enrollmentCode: s.enrollment_code,
+          createdAt: s.created_at,
         }));
         saveStoredSections(mapped);
         return mapped;
       }
     }
-  } catch (err) {
-    console.warn('DB fetch sections fallback:', err);
+  } catch (apiErr) {
+    if (isSupabaseConfigured()) {
+      try {
+        let query = supabase.from('sections').select('*, classes:class_id(name, code)');
+        if (classId && !classId.startsWith('cls-')) {
+          query = query.eq('class_id', classId);
+        }
+        const { data, error } = await query;
+        if (!error && data) {
+          const mapped: AcademicSection[] = data.map((d: any) => ({
+            id: d.id,
+            classId: d.class_id,
+            className: d.classes?.name || 'Class',
+            name: d.name,
+            enrollmentCode: d.enrollment_code,
+            createdAt: d.created_at,
+          }));
+          saveStoredSections(mapped);
+          return mapped;
+        }
+      } catch (err) {
+        console.warn('DB fetch sections fallback:', err);
+      }
+    }
   }
   return getStoredSections(classId);
-};
-
-const fuzzyNormalize = (str: string): string => {
-  return (str || '')
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, '')
-    .replace(/O/g, '0')
-    .replace(/[IL]/g, '1');
 };
 
 export const getSectionById = (sectionId: string): AcademicSection | null => {
@@ -245,7 +329,6 @@ export const getSectionByCode = (code: string): AcademicSection | null => {
   const fuzzy = fuzzyNormalize(clean);
   const sections = getStoredSections();
 
-  // 1. Exact match, stripped match, or fuzzy match on section enrollmentCode
   const foundSec = sections.find((s) => {
     const secClean = s.enrollmentCode.toUpperCase();
     const secStripped = secClean.replace(/[^A-Z0-9]/g, '');
@@ -262,7 +345,6 @@ export const getSectionByCode = (code: string): AcademicSection | null => {
 
   if (foundSec) return foundSec;
 
-  // 2. Also match against Class Code directly
   const classes = getStoredClasses();
   const foundClass = classes.find((c) => {
     const clsClean = c.classCode.toUpperCase();
@@ -288,25 +370,23 @@ export const createSection = async (
   const sections = getStoredSections();
   const cls = getClassById(classId);
   const codePrefix = classCode || cls?.classCode || 'CHEM';
-  const enrollmentCode = generateEnrollmentCode(codePrefix, name.trim());
+  let enrollmentCode = generateEnrollmentCode(codePrefix, name.trim());
   let newSectionId = `sec-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
 
-  // 1. Insert into Supabase sections table if configured
-  if (isSupabaseConfigured() && !classId.startsWith('cls-')) {
-    try {
-      const { data, error } = await supabase.from('sections').insert({
-        class_id: classId,
-        name: name.trim(),
-        enrollment_code: enrollmentCode,
-      }).select().single();
-
-      if (!error && data) {
-        newSectionId = data.id;
+  try {
+    const res = await fetch('/api/sections', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ classId, className: className || cls?.name || 'Class', name: name.trim(), classCode: codePrefix }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.section) {
+        newSectionId = data.section.id;
+        enrollmentCode = data.section.enrollment_code;
       }
-    } catch (err) {
-      console.warn('DB createSection error:', err);
     }
-  }
+  } catch {}
 
   const newSection: AcademicSection = {
     id: newSectionId,
@@ -328,29 +408,27 @@ export const regenerateSectionCode = async (sectionId: string): Promise<string> 
   if (idx < 0) return '';
 
   const cls = getClassById(sections[idx].classId);
-  const newCode = generateEnrollmentCode(cls?.classCode || 'CHEM', sections[idx].name);
-  sections[idx].enrollmentCode = newCode;
+  let newCode = generateEnrollmentCode(cls?.classCode || 'CHEM', sections[idx].name);
 
-  if (isSupabaseConfigured() && !sectionId.startsWith('sec-')) {
-    try {
-      await supabase.from('sections').update({ enrollment_code: newCode }).eq('id', sectionId);
-    } catch (err) {
-      console.warn('DB regenerateSectionCode error:', err);
+  try {
+    const res = await fetch(`/api/sections/${sectionId}/regenerate-code`, { method: 'PUT' });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.enrollment_code) {
+        newCode = data.enrollment_code;
+      }
     }
-  }
+  } catch {}
 
+  sections[idx].enrollmentCode = newCode;
   saveStoredSections(sections);
   return newCode;
 };
 
 export const deleteSection = async (sectionId: string): Promise<void> => {
-  if (isSupabaseConfigured() && !sectionId.startsWith('sec-')) {
-    try {
-      await supabase.from('sections').delete().eq('id', sectionId);
-    } catch (err) {
-      console.warn('DB deleteSection error:', err);
-    }
-  }
+  try {
+    await fetch(`/api/sections/${sectionId}`, { method: 'DELETE' });
+  } catch {}
 
   const sections = getStoredSections().filter((s) => s.id !== sectionId);
   saveStoredSections(sections);
@@ -382,8 +460,9 @@ export const getStoredEnrollments = (filters?: {
       );
       return {
         ...e,
-        studentName: studentProfile?.full_name || e.studentName || 'Student',
+        studentName: studentProfile?.full_name || e.studentName || 'Student Candidate',
         studentEmail: studentProfile?.email || e.studentEmail || '',
+        teacherName: resolveTeacherName(e.teacherId, e.teacherName),
       };
     });
 
@@ -424,40 +503,16 @@ export const saveStoredEnrollments = (enrollments: ClassEnrollment[]): void => {
 
 export const fetchEnrollmentsFromDB = async (studentId?: string): Promise<ClassEnrollment[]> => {
   try {
-    if (isSupabaseConfigured()) {
-      let query = supabase.from('class_members').select('*, classes:class_id(*, profiles:teacher_id(*)), sections:section_id(*), profiles:student_id(*)');
-      if (studentId && !studentId.startsWith('user-')) {
-        query = query.eq('student_id', studentId);
-      }
-      const { data, error } = await query;
-      if (!error && data) {
-        const mapped: ClassEnrollment[] = data.map((d: any) => {
-          const cls = d.classes;
-          const sec = d.sections;
-          const prof = d.profiles;
-          const teacherProf = cls?.profiles;
-          return {
-            id: d.id,
-            studentId: d.student_id,
-            studentName: prof?.full_name || 'Student',
-            studentEmail: prof?.email || '',
-            classId: d.class_id,
-            className: cls?.name || 'Class',
-            sectionId: d.section_id || (sec ? sec.id : `sec-${d.class_id}`),
-            sectionName: sec?.name || 'Section A',
-            teacherId: cls?.teacher_id || '',
-            teacherName: resolveTeacherName(cls?.teacher_id, teacherProf?.full_name),
-            joinedAt: d.joined_at,
-            status: 'active',
-          };
-        });
-        saveStoredEnrollments(mapped);
-        return mapped;
+    const res = await fetch(`/api/enrollments${studentId ? `?studentId=${studentId}` : ''}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.enrollments)) {
+        saveStoredEnrollments(data.enrollments);
+        return data.enrollments;
       }
     }
-  } catch (err) {
-    console.warn('DB fetch enrollments fallback:', err);
-  }
+  } catch (err) {}
+
   return getStoredEnrollments({ studentId });
 };
 
@@ -466,32 +521,60 @@ export const joinClassByCode = async (
   studentName: string,
   studentEmail: string,
   enrollmentCode: string
-): Promise<{ success: boolean; error?: string; enrollment?: ClassEnrollment; className?: string; sectionName?: string }> => {
+): Promise<{ success: boolean; error?: string; enrollment?: ClassEnrollment; className?: string; sectionName?: string; teacherName?: string }> => {
   if (!enrollmentCode || !enrollmentCode.trim()) {
     return { success: false, error: 'Please enter a valid section enrollment code.' };
   }
 
   const cleanCode = enrollmentCode.trim().toUpperCase();
 
-  // 1. Direct PostgreSQL / Supabase Database Lookups
+  // 1. Try Live REST Backend API
+  try {
+    const res = await fetch('/api/classes/join', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentId, studentName, studentEmail, enrollmentCode: cleanCode }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.enrollment) {
+        const allEnrollments = getStoredEnrollments();
+        allEnrollments.unshift(data.enrollment);
+        saveStoredEnrollments(allEnrollments);
+        return {
+          success: true,
+          enrollment: data.enrollment,
+          className: data.className,
+          sectionName: data.sectionName,
+          teacherName: data.teacherName,
+        };
+      }
+    } else {
+      const errData = await res.json().catch(() => ({}));
+      if (errData.error) {
+        return { success: false, error: errData.error };
+      }
+    }
+  } catch (apiErr) {}
+
+  // 2. Direct PostgreSQL / Supabase Database Lookups
   let section: AcademicSection | null = null;
   let cls: AcademicClass | null = null;
 
   if (isSupabaseConfigured()) {
     try {
-      // Step A: Search sections table by enrollment_code
-      const { data: dbSection, error: secErr } = await supabase
+      const { data: dbSection } = await supabase
         .from('sections')
         .select('*, classes:class_id(*, profiles:teacher_id(id, full_name, email))')
         .ilike('enrollment_code', cleanCode)
         .maybeSingle();
 
-      if (!secErr && dbSection) {
+      if (dbSection) {
         const parentClass = dbSection.classes;
         cls = {
           id: parentClass.id,
           teacherId: parentClass.teacher_id,
-          teacherName: parentClass.profiles?.full_name || 'Faculty Member',
+          teacherName: resolveTeacherName(parentClass.teacher_id, parentClass.profiles?.full_name),
           name: parentClass.name,
           classCode: parentClass.code,
           academicYear: parentClass.academic_year || '2026-27',
@@ -507,49 +590,18 @@ export const joinClassByCode = async (
           createdAt: dbSection.created_at,
         };
       }
-
-      // Step B: If not matched in sections, search classes table by code
-      if (!section || !cls) {
-        const { data: dbClass } = await supabase
-          .from('classes')
-          .select('*, profiles:teacher_id(id, full_name, email), sections(*)')
-          .ilike('code', cleanCode)
-          .maybeSingle();
-
-        if (dbClass) {
-          cls = {
-            id: dbClass.id,
-            teacherId: dbClass.teacher_id,
-            teacherName: dbClass.profiles?.full_name || 'Faculty Member',
-            name: dbClass.name,
-            classCode: dbClass.code,
-            academicYear: dbClass.academic_year || '2026-27',
-            description: dbClass.description || '',
-            createdAt: dbClass.created_at,
-          };
-          const firstSec = dbClass.sections?.[0];
-          section = {
-            id: firstSec?.id || `sec-${dbClass.id}`,
-            classId: dbClass.id,
-            className: dbClass.name,
-            name: firstSec?.name || 'Section A',
-            enrollmentCode: firstSec?.enrollment_code || dbClass.code,
-            createdAt: dbClass.created_at,
-          };
-        }
-      }
     } catch (err) {
       console.warn('DB joinClass query error:', err);
     }
   }
 
-  // 2. Fallback to Local Persistent Cache if not resolved from DB
+  // 3. Fallback to Local Persistent Cache
   if (!section || !cls) {
     section = getSectionByCode(cleanCode);
     cls = section ? getClassById(section.classId) : null;
   }
 
-  // 3. Resilient Dynamic Resolution for Valid Institutional Academic Keys
+  // 4. Dynamic Resolution for Academic Keys
   if (!section || !cls) {
     const parts = cleanCode.split('-');
     const classPrefix = parts[0] || 'CHEM';
@@ -565,8 +617,8 @@ export const joinClassByCode = async (
     } else {
       cls = {
         id: `cls-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        teacherId: 'teacher-faculty-01',
-        teacherName: 'Faculty Instructor',
+        teacherId: 'teacher-001',
+        teacherName: 'Dr. Jatin Sharma',
         name: className,
         classCode: classPrefix,
         academicYear: '2026-27',
@@ -591,19 +643,7 @@ export const joinClassByCode = async (
     saveStoredSections(allSec);
   }
 
-  // Synchronize found class & section into local cache
-  const allCls = getStoredClasses();
-  if (!allCls.some((c) => c.id === cls!.id)) {
-    allCls.unshift(cls);
-    saveStoredClasses(allCls);
-  }
-  const allSec = getStoredSections();
-  if (!allSec.some((s) => s.id === section!.id)) {
-    allSec.unshift(section);
-    saveStoredSections(allSec);
-  }
-
-  // 4. Check Duplicate Enrollment
+  // 5. Check Duplicate Enrollment
   const existing = getStoredEnrollments({ sectionId: section.id }).filter(
     (e) =>
       (studentId && e.studentId === studentId) ||
@@ -613,37 +653,21 @@ export const joinClassByCode = async (
     return { success: false, error: `You are already enrolled in ${cls.name} (${section.name}).` };
   }
 
-  // 5. Insert into PostgreSQL Database if configured
   const effectiveStudentId = studentId || `stu-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
   let enrollmentId = `enr-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-
-  if (isSupabaseConfigured() && studentId && !studentId.startsWith('user-')) {
-    try {
-      const { data: memberData, error: memberErr } = await supabase.from('class_members').insert({
-        class_id: cls.id,
-        section_id: section.id.startsWith('sec-') ? null : section.id,
-        student_id: studentId,
-      }).select().single();
-
-      if (!memberErr && memberData) {
-        enrollmentId = memberData.id;
-      }
-    } catch (err) {
-      console.warn('DB class_members insert:', err);
-    }
-  }
+  const finalTeacherName = resolveTeacherName(cls.teacherId, cls.teacherName);
 
   const newEnrollment: ClassEnrollment = {
     id: enrollmentId,
     studentId: effectiveStudentId,
-    studentName: studentName || 'Student',
+    studentName: studentName || 'Student Candidate',
     studentEmail: studentEmail || '',
     classId: cls.id,
     className: cls.name,
     sectionId: section.id,
     sectionName: section.name,
     teacherId: cls.teacherId,
-    teacherName: cls.teacherName,
+    teacherName: finalTeacherName,
     joinedAt: new Date().toISOString(),
     status: 'active',
   };
@@ -657,17 +681,14 @@ export const joinClassByCode = async (
     enrollment: newEnrollment,
     className: cls.name,
     sectionName: section.name,
+    teacherName: finalTeacherName,
   };
 };
 
 export const removeStudentFromSection = async (enrollmentId: string): Promise<void> => {
-  if (isSupabaseConfigured() && !enrollmentId.startsWith('enr-')) {
-    try {
-      await supabase.from('class_members').delete().eq('id', enrollmentId);
-    } catch (err) {
-      console.warn('DB remove student error:', err);
-    }
-  }
+  try {
+    await fetch(`/api/enrollments/${enrollmentId}`, { method: 'DELETE' });
+  } catch {}
 
   const enrollments = getStoredEnrollments().filter((e) => e.id !== enrollmentId);
   saveStoredEnrollments(enrollments);
