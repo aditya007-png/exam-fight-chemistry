@@ -47,6 +47,18 @@
   ],
   "classes": [
     {
+      "id": "cls-1788004065430-o4n9",
+      "name": "Physical Chem",
+      "code": "PC101",
+      "teacher_id": "teacher-1788004065409",
+      "teacher_name": "Prof. Alok",
+      "academic_year": "2026-27",
+      "subject": "Chemistry",
+      "description": "",
+      "created_at": "2026-08-29T11:47:45.430Z",
+      "updated_at": "2026-08-29T11:47:45.430Z"
+    },
+    {
       "id": "cls-1788003726813-xtq4",
       "name": "B.Tech CSE - Inorganic Chemistry II",
       "code": "CSE-CHEM-402",
@@ -229,6 +241,15 @@
   ],
   "sections": [
     {
+      "id": "sec-cls-1788004065430-o4n9-a",
+      "class_id": "cls-1788004065430-o4n9",
+      "className": "Physical Chem",
+      "name": "Section A",
+      "enrollment_code": "PC10-A0BOR",
+      "created_at": "2026-08-29T11:47:45.430Z",
+      "updated_at": "2026-08-29T11:47:45.430Z"
+    },
+    {
       "id": "sec-cls-1788003726813-xtq4-a",
       "class_id": "cls-1788003726813-xtq4",
       "className": "B.Tech CSE - Inorganic Chemistry II",
@@ -401,6 +422,20 @@
     }
   ],
   "enrollments": [
+    {
+      "id": "enr-1788004065437-o0ai",
+      "studentId": "stu-1788004065409",
+      "studentName": "Aditya",
+      "studentEmail": "a@c.edu",
+      "classId": "cls-1788004065430-o4n9",
+      "className": "Physical Chem",
+      "sectionId": "sec-cls-1788004065430-o4n9-a",
+      "sectionName": "Section A",
+      "teacherId": "teacher-1788004065409",
+      "teacherName": "Prof. Alok",
+      "joinedAt": "2026-08-29T11:47:45.437Z",
+      "status": "active"
+    },
     {
       "id": "enr-1788003726824-1a8l",
       "studentId": "stu-s4u-rohit-1788003726781",
@@ -725,6 +760,28 @@
     }
   ],
   "exams": [
+    {
+      "id": "exam-1788004065441-oqzk",
+      "title": "Kinetics Quiz",
+      "topic": "General Chemistry",
+      "courseCode": "PC101",
+      "courseName": "PC101 — Physical Chem",
+      "teacherId": "teacher-1788004065409",
+      "teacherName": "Prof. Alok",
+      "classId": "cls-1788004065430-o4n9",
+      "className": "Physical Chem",
+      "sectionId": "sec-cls-1788004065430-o4n9-a",
+      "sectionName": "Section A",
+      "durationMinutes": 30,
+      "instructions": "Standard examination rules apply. Complete all questions before the timer expires.",
+      "totalQuestions": 0,
+      "totalMarks": 100,
+      "passingMarks": 40,
+      "status": "published",
+      "questions": [],
+      "created_at": "2026-08-29T11:47:45.441Z",
+      "updated_at": "2026-08-29T11:47:45.441Z"
+    },
     {
       "id": "exam-1788003726829-wgz1",
       "title": "Thermodynamics & Equilibrium Test",
@@ -1585,6 +1642,48 @@
   ],
   "attempts": [
     {
+      "id": "att-1788004065444-sn62",
+      "examId": "exam-1788004065441-oqzk",
+      "examTitle": "Kinetics Quiz",
+      "courseCode": "PC101",
+      "className": "Physical Chem",
+      "studentId": "stu-1788004065409",
+      "studentName": "Aditya",
+      "studentEmail": "a@c.edu",
+      "sectionId": "sec-cls-1788004065430-o4n9-a",
+      "status": "in_progress",
+      "score": null,
+      "totalMarks": 100,
+      "integrityScore": 100,
+      "answers": {},
+      "proctoringEvents": [],
+      "startedAt": "2026-08-29T11:47:45.444Z",
+      "submittedAt": null,
+      "created_at": "2026-08-29T11:47:45.444Z",
+      "updated_at": "2026-08-29T11:47:45.459Z"
+    },
+    {
+      "id": "att-1788003933471-f3io",
+      "examId": "exam-1788001812498-mv7h",
+      "examTitle": "Organic Chemistry — Unit Test",
+      "courseCode": "AS",
+      "className": "ADOP",
+      "studentId": "user-1788001854966-auig",
+      "studentName": "ADITYA",
+      "studentEmail": "aditya233@gmail.com",
+      "sectionId": "sec-cls-1788001669870-5a9f-a",
+      "status": "in_progress",
+      "score": null,
+      "totalMarks": 18,
+      "integrityScore": 100,
+      "answers": {},
+      "proctoringEvents": [],
+      "startedAt": "2026-08-29T11:45:33.471Z",
+      "submittedAt": null,
+      "created_at": "2026-08-29T11:45:33.471Z",
+      "updated_at": "2026-08-29T11:45:33.471Z"
+    },
+    {
       "id": "att-1788003726833-7frw",
       "examId": "exam-1788003726829-wgz1",
       "examTitle": "Thermodynamics & Equilibrium Test",
@@ -1829,6 +1928,28 @@
     }
   ],
   "requests": [
+    {
+      "id": "req-1788004065452-5vrn",
+      "studentId": "stu-1788004065409",
+      "studentName": "Aditya",
+      "studentEmail": "a@c.edu",
+      "teacherId": "teacher-1788004065409",
+      "teacherName": "Prof. Alok",
+      "classId": "cls-1788004065430-o4n9",
+      "className": "Physical Chem",
+      "sectionId": "sec-cls-1788004065430-o4n9-a",
+      "sectionName": "Section A",
+      "examId": "exam-1788004065441-oqzk",
+      "examTitle": "Kinetics Quiz",
+      "attemptId": "att-1788004065444-sn62",
+      "requestType": "EXAM_EXITED",
+      "message": "Accidentally closed tab",
+      "status": "APPROVED",
+      "teacherResponse": "Approved. You can resume.",
+      "resolvedAt": "2026-08-29T11:47:45.459Z",
+      "createdAt": "2026-08-29T11:47:45.452Z",
+      "updatedAt": "2026-08-29T11:47:45.459Z"
+    },
     {
       "id": "req-1788003726837-x1oq",
       "studentId": "stu-s4u-aditya-1788003726781",

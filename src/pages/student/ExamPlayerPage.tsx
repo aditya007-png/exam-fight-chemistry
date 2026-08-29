@@ -23,6 +23,7 @@ import {
   requestExamRestart,
   checkExamRestartStatus,
 } from '../../lib/evidenceService';
+import { createStudentRequest } from '../../lib/requestService';
 import { ExamQuestion, StudentAnswerState } from '../../types/exam';
 import {
   Clock,
@@ -192,7 +193,15 @@ export const ExamPlayerPage: React.FC = () => {
   // Student requests teacher permission to restart
   const handleRequestRestartFromTeacher = async () => {
     if (!terminationInfo) return;
-    setIsRequestingRestart(true);
+    await createStudentRequest({
+      studentId: user?.id || 'stu-001',
+      studentName: user?.full_name || 'Candidate',
+      studentEmail: user?.email || 'student@chem.edu',
+      examId: activeExamId,
+      attemptId: terminationInfo.attemptId,
+      requestType: 'EXAM_EXITED',
+      message: studentNote.trim() || terminationInfo.reason || 'Exam exited unexpectedly. Requesting permission to resume examination.',
+    });
 
     await requestExamRestart({
       attemptId: terminationInfo.attemptId,
