@@ -2,12 +2,40 @@
 // Real PostgreSQL & Supabase Database Service for Classes, Sections, and Student Enrollments
 import { supabase, isSupabaseConfigured } from './supabase';
 import { AcademicClass, AcademicSection, ClassEnrollment } from '../types/academic';
+import { getStoredUsers, getTeachers } from './userService';
 
 const CLASSES_STORAGE_KEY = 'efc_academic_classes_v1';
 const SECTIONS_STORAGE_KEY = 'efc_academic_sections_v1';
 const ENROLLMENTS_STORAGE_KEY = 'efc_class_enrollments_v1';
 
 // ── 1. Helper Functions ──────────────────────────────────────────────────────
+
+export const resolveTeacherName = (teacherId?: string, fallbackName?: string): string => {
+  try {
+    const users = getStoredUsers();
+    if (teacherId) {
+      const found = users.find((u) => u.id === teacherId);
+      if (found && found.full_name && found.full_name.trim() !== '') {
+        return found.full_name;
+      }
+    }
+    if (
+      fallbackName &&
+      fallbackName !== 'Faculty Member' &&
+      fallbackName !== 'Faculty Instructor' &&
+      fallbackName.trim() !== ''
+    ) {
+      return fallbackName;
+    }
+    const teachers = getTeachers();
+    if (teachers.length > 0 && teachers[0].full_name && teachers[0].full_name.trim() !== '') {
+      return teachers[0].full_name;
+    }
+  } catch (err) {
+    console.warn('resolveTeacherName error:', err);
+  }
+  return fallbackName || 'Faculty Instructor';
+};
 
 export const generateEnrollmentCode = (classCode: string, sectionName: string): string => {
   const prefix = (classCode || 'CHEM').replace(/[^a-zA-Z0-9]/g, '').substring(0, 4).toUpperCase();
@@ -52,7 +80,7 @@ export const fetchClassesFromDB = async (teacherId?: string): Promise<AcademicCl
         const mapped: AcademicClass[] = data.map((d: any) => ({
           id: d.id,
           teacherId: d.teacher_id,
-          teacherName: d.profiles?.full_name || 'Faculty Member',
+          teacherName: resolveTeacherName(d.teacher_id, d.profiles?.full_name),
           name: d.name,
           classCode: d.code,
           academicYear: d.academic_year || '2026-27',
@@ -404,7 +432,7 @@ export const fetchEnrollmentsFromDB = async (studentId?: string): Promise<ClassE
             sectionId: d.section_id || (sec ? sec.id : `sec-${d.class_id}`),
             sectionName: sec?.name || 'Section A',
             teacherId: cls?.teacher_id || '',
-            teacherName: teacherProf?.full_name || 'Faculty Member',
+            teacherName: resolveTeacherName(cls?.teacher_id, teacherProf?.full_name),
             joinedAt: d.joined_at,
             status: 'active',
           };
@@ -665,17 +693,24 @@ export const getStudentEnrolledClasses = (studentId: string, studentEmail?: stri
     let cls = getClassById(enr.classId);
     let sec = getSectionById(enr.sectionId);
 
+    const actualTeacherName = resolveTeacherName(
+      cls?.teacherId || enr.teacherId,
+      cls?.teacherName || enr.teacherName
+    );
+
     if (!cls) {
       cls = {
         id: enr.classId,
         teacherId: enr.teacherId,
-        teacherName: enr.teacherName || 'Faculty Instructor',
+        teacherName: actualTeacherName,
         name: enr.className || 'Chemistry Class',
         classCode: 'CHEM',
         academicYear: '2026-27',
         description: '',
         createdAt: enr.joinedAt,
       };
+    } else {
+      cls.teacherName = actualTeacherName;
     }
 
     if (!sec) {
@@ -688,6 +723,8 @@ export const getStudentEnrolledClasses = (studentId: string, studentEmail?: stri
         createdAt: enr.joinedAt,
       };
     }
+
+    enr.teacherName = actualTeacherName;
 
     result.push({
       class: cls,
