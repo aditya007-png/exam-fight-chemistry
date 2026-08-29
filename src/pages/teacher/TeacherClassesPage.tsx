@@ -1,6 +1,6 @@
 // src/pages/teacher/TeacherClassesPage.tsx
 // Complete Class, Section, and Enrollment Code Management for Teachers
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import {
   AcademicClass,
@@ -38,13 +38,17 @@ import {
   RefreshCw,
   UserX,
   GraduationCap,
+  Bell,
+  Eye,
+  Mail,
+  Calendar,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const TeacherClassesPage: React.FC = () => {
   const { user } = useAuth();
   const teacherId = user?.id || '';
-  const teacherName = user?.full_name || 'Faculty Instructor';
+  const teacherName = user?.full_name || 'Dr. Jatin Sharma';
 
   const [classes, setClasses] = useState<AcademicClass[]>([]);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
@@ -54,6 +58,10 @@ export const TeacherClassesPage: React.FC = () => {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [liveJoinedNotification, setLiveJoinedNotification] = useState<string | null>(null);
+
+  // Selected Student Details Modal
+  const [viewingStudent, setViewingStudent] = useState<ClassEnrollment | null>(null);
 
   // Create Class Modal
   const [isCreateClassOpen, setIsCreateClassOpen] = useState(false);
@@ -65,6 +73,8 @@ export const TeacherClassesPage: React.FC = () => {
   // Create Section Modal
   const [isCreateSectionOpen, setIsCreateSectionOpen] = useState(false);
   const [newSectionName, setNewSectionName] = useState('');
+
+  const previousCountRef = useRef<number>(0);
 
   const loadData = async () => {
     await fetchProfilesFromDB();
@@ -96,19 +106,38 @@ export const TeacherClassesPage: React.FC = () => {
 
       if (activeSecId) {
         await fetchEnrollmentsFromDB();
-        const enrList = getStoredEnrollments({ sectionId: activeSecId });
+        const enrList = getStoredEnrollments({ sectionId: activeSecId, teacherId });
         setEnrollments(enrList);
+
+        // Check if a new student joined while viewing
+        if (previousCountRef.current > 0 && enrList.length > previousCountRef.current) {
+          const newest = enrList[0];
+          setLiveJoinedNotification(`🎉 New student joined ${newest.sectionName}: ${newest.studentName} (${newest.studentEmail})`);
+          setTimeout(() => setLiveJoinedNotification(null), 6000);
+        }
+        previousCountRef.current = enrList.length;
       } else {
         setEnrollments([]);
+        previousCountRef.current = 0;
       }
     } else {
       setSections([]);
       setEnrollments([]);
+      previousCountRef.current = 0;
     }
   };
 
   useEffect(() => {
     loadData();
+  }, [teacherId, selectedClassId, selectedSectionId]);
+
+  // Real-time Background Polling Every 3 Seconds
+  useEffect(() => {
+    const pollInterval = setInterval(() => {
+      loadData();
+    }, 3000);
+
+    return () => clearInterval(pollInterval);
   }, [teacherId, selectedClassId, selectedSectionId]);
 
   const handleSelectClass = async (clsId: string) => {
@@ -118,16 +147,21 @@ export const TeacherClassesPage: React.FC = () => {
     setSections(secList);
     if (secList.length > 0) {
       setSelectedSectionId(secList[0].id);
-      setEnrollments(getStoredEnrollments({ sectionId: secList[0].id }));
+      const enrs = getStoredEnrollments({ sectionId: secList[0].id, teacherId });
+      setEnrollments(enrs);
+      previousCountRef.current = enrs.length;
     } else {
       setSelectedSectionId(null);
       setEnrollments([]);
+      previousCountRef.current = 0;
     }
   };
 
   const handleSelectSection = (secId: string) => {
     setSelectedSectionId(secId);
-    setEnrollments(getStoredEnrollments({ sectionId: secId }));
+    const enrs = getStoredEnrollments({ sectionId: secId, teacherId });
+    setEnrollments(enrs);
+    previousCountRef.current = enrs.length;
   };
 
   const handleCreateClass = async (e: React.FormEvent) => {
@@ -149,8 +183,7 @@ export const TeacherClassesPage: React.FC = () => {
     setNewDescription('');
     setSelectedClassId(created.id);
     await loadData();
-
-    setSuccessToast(`Class "${created.name}" created successfully with Section A!`);
+    setSuccessToast(`Class "${created.name}" created with Section A!`);
     setTimeout(() => setSuccessToast(null), 3500);
   };
 
@@ -158,29 +191,33 @@ export const TeacherClassesPage: React.FC = () => {
     e.preventDefault();
     if (!selectedClassId || !newSectionName.trim()) return;
 
-    const cls = classes.find((c) => c.id === selectedClassId);
-    const createdSec = await createSection(selectedClassId, cls?.name || 'Class', newSectionName);
+    const currentClass = classes.find((c) => c.id === selectedClassId);
+    const createdSec = await createSection(
+      selectedClassId,
+      currentClass?.name || 'Class',
+      newSectionName.trim(),
+      currentClass?.classCode
+    );
 
     setIsCreateSectionOpen(false);
     setNewSectionName('');
     setSelectedSectionId(createdSec.id);
     await loadData();
-
-    setSuccessToast(`Section "${createdSec.name}" created with code ${createdSec.enrollmentCode}!`);
+    setSuccessToast(`Section "${createdSec.name}" added with code ${createdSec.enrollmentCode}`);
     setTimeout(() => setSuccessToast(null), 3500);
   };
 
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code);
     setCopiedCode(code);
-    setTimeout(() => setCopiedCode(null), 2500);
+    setTimeout(() => setCopiedCode(null), 2000);
   };
 
   const handleRegenerateCode = async (secId: string) => {
-    if (window.confirm('Regenerating will invalidate the previous code for new students. Continue?')) {
+    if (window.confirm('Regenerate enrollment code for this section? The previous code will no longer work.')) {
       const newCode = await regenerateSectionCode(secId);
       await loadData();
-      setSuccessToast(`New enrollment code generated: ${newCode}`);
+      setSuccessToast(`Generated new enrollment key: ${newCode}`);
       setTimeout(() => setSuccessToast(null), 3500);
     }
   };
@@ -206,11 +243,11 @@ export const TeacherClassesPage: React.FC = () => {
     }
   };
 
-  const handleRemoveStudent = async (enrId: string, studentName: string) => {
-    if (window.confirm(`Remove student ${studentName} from this section?`)) {
+  const handleRemoveStudent = async (enrId: string, sName: string) => {
+    if (window.confirm(`Remove student ${sName} from this section?`)) {
       await removeStudentFromSection(enrId);
       await loadData();
-      setSuccessToast(`Removed ${studentName} from section.`);
+      setSuccessToast(`Removed ${sName} from section.`);
       setTimeout(() => setSuccessToast(null), 3500);
     }
   };
@@ -221,11 +258,28 @@ export const TeacherClassesPage: React.FC = () => {
   const filteredEnrollments = enrollments.filter(
     (e) =>
       e.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      e.studentEmail.toLowerCase().includes(searchQuery.toLowerCase())
+      e.studentEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      e.studentId.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
+      {/* Real-time Notification Banner */}
+      {liveJoinedNotification && (
+        <div className="p-4 rounded-xl bg-blue-600 text-white text-xs font-bold flex items-center justify-between shadow-lg animate-in slide-in-from-top duration-300">
+          <div className="flex items-center gap-2.5">
+            <Bell className="w-5 h-5 animate-bounce" />
+            <span>{liveJoinedNotification}</span>
+          </div>
+          <button
+            onClick={() => setLiveJoinedNotification(null)}
+            className="text-white/80 hover:text-white text-xs underline font-semibold"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* Toast Notification */}
       {successToast && (
         <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center justify-between shadow-xs animate-in fade-in">
@@ -302,7 +356,7 @@ export const TeacherClassesPage: React.FC = () => {
                 {classes.map((cls) => {
                   const isSelected = cls.id === selectedClassId;
                   const clsSections = getStoredSections(cls.id);
-                  const clsEnrollments = getStoredEnrollments({ classId: cls.id });
+                  const clsEnrollments = getStoredEnrollments({ classId: cls.id, teacherId });
 
                   return (
                     <div
@@ -341,8 +395,8 @@ export const TeacherClassesPage: React.FC = () => {
                           <Layers className="w-3 h-3 text-slate-400" />
                           {clsSections.length} {clsSections.length === 1 ? 'Section' : 'Sections'}
                         </span>
-                        <span className="flex items-center gap-1">
-                          <Users className="w-3 h-3 text-slate-400" />
+                        <span className="flex items-center gap-1 font-bold text-slate-700">
+                          <Users className="w-3 h-3 text-indigo-600" />
                           {clsEnrollments.length} Students
                         </span>
                         <span className="text-slate-400">{cls.academicYear}</span>
@@ -377,7 +431,7 @@ export const TeacherClassesPage: React.FC = () => {
                   <div className="space-y-2">
                     {sections.map((sec) => {
                       const isSecSelected = sec.id === selectedSectionId;
-                      const secEnrollments = getStoredEnrollments({ sectionId: sec.id });
+                      const secEnrollments = getStoredEnrollments({ sectionId: sec.id, teacherId });
 
                       return (
                         <div
@@ -397,7 +451,7 @@ export const TeacherClassesPage: React.FC = () => {
                               <span className="text-[10px] font-mono font-bold text-indigo-700 bg-indigo-100/70 px-1.5 py-0.5 rounded">
                                 {sec.enrollmentCode}
                               </span>
-                              <span className="text-[10px] text-slate-500">
+                              <span className="text-[10px] font-bold text-slate-700">
                                 {secEnrollments.length} enrolled
                               </span>
                             </div>
@@ -446,7 +500,7 @@ export const TeacherClassesPage: React.FC = () => {
           <div className="lg:col-span-8 space-y-5">
             {currentSection ? (
               <>
-                {/* Active Section Key Card */}
+                {/* Active Section Key & Class Metadata Card */}
                 <div className="rounded-2xl bg-white border border-slate-200 p-5 shadow-card space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
                     <div>
@@ -458,9 +512,13 @@ export const TeacherClassesPage: React.FC = () => {
                           {currentClass?.name} — {currentSection.name}
                         </h2>
                       </div>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        Students use the unique enrollment key below to join this section.
-                      </p>
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 mt-1">
+                        <span>Instructor: <strong className="text-slate-700">{currentClass?.teacherName || teacherName}</strong></span>
+                        <span>•</span>
+                        <span>Academic Year: <strong className="text-slate-700">{currentClass?.academicYear}</strong></span>
+                        <span>•</span>
+                        <span>Section: <strong className="text-slate-700">{currentSection.name}</strong></span>
+                      </div>
                     </div>
 
                     <Link to="/teacher/create-exam">
@@ -474,7 +532,7 @@ export const TeacherClassesPage: React.FC = () => {
                   <div className="p-4 rounded-xl bg-gradient-to-r from-blue-50 via-indigo-50 to-slate-50 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="space-y-0.5">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                        Section Enrollment Key
+                        Section Enrollment Key (Share with Students)
                       </span>
                       <div className="flex items-center gap-2">
                         <KeyRound className="w-4 h-4 text-blue-600" />
@@ -515,16 +573,16 @@ export const TeacherClassesPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Enrolled Students Roster */}
+                {/* Enrolled Students Roster Card */}
                 <div className="rounded-2xl bg-white border border-slate-200 p-5 shadow-card space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                         <Users className="w-4 h-4 text-indigo-600" />
-                        <span>Enrolled Students ({enrollments.length})</span>
+                        <span>Students Joined: <strong className="text-blue-700">{enrollments.length}</strong></span>
                       </h3>
                       <p className="text-xs text-slate-500">
-                        Active student roster for {currentSection.name}.
+                        Real-time student roster enrolled in {currentClass?.name} ({currentSection.name}).
                       </p>
                     </div>
 
@@ -532,7 +590,7 @@ export const TeacherClassesPage: React.FC = () => {
                       <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                       <input
                         type="text"
-                        placeholder="Search student..."
+                        placeholder="Search student or email..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -544,10 +602,10 @@ export const TeacherClassesPage: React.FC = () => {
                     <div className="p-8 text-center border-2 border-dashed border-slate-200 rounded-xl space-y-2">
                       <Users className="w-8 h-8 text-slate-300 mx-auto" />
                       <p className="text-xs font-semibold text-slate-600">
-                        No students enrolled in this section yet.
+                        Students Joined: 0
                       </p>
                       <p className="text-[11px] text-slate-400 max-w-sm mx-auto">
-                        Share enrollment key <strong className="font-mono text-slate-700">{currentSection.enrollmentCode}</strong> with your students to have them join.
+                        Share enrollment key <strong className="font-mono text-slate-700">{currentSection.enrollmentCode}</strong> with your students to have them join this section.
                       </p>
                     </div>
                   ) : (
@@ -557,14 +615,19 @@ export const TeacherClassesPage: React.FC = () => {
                           <tr className="border-b border-slate-200 bg-slate-50/70 text-slate-500 font-semibold">
                             <th className="py-2.5 px-3">Student Name</th>
                             <th className="py-2.5 px-3">Email Address</th>
-                            <th className="py-2.5 px-3">Enrolled Date</th>
+                            <th className="py-2.5 px-3">Student ID</th>
+                            <th className="py-2.5 px-3">Joined Date</th>
                             <th className="py-2.5 px-3">Status</th>
                             <th className="py-2.5 px-3 text-right">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                           {filteredEnrollments.map((enr) => (
-                            <tr key={enr.id} className="hover:bg-slate-50/80 transition-colors">
+                            <tr
+                              key={enr.id}
+                              onClick={() => setViewingStudent(enr)}
+                              className="hover:bg-blue-50/50 cursor-pointer transition-colors"
+                            >
                               <td className="py-2.5 px-3 font-bold text-slate-900 flex items-center gap-2">
                                 <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-[10px]">
                                   {enr.studentName.charAt(0)}
@@ -574,6 +637,9 @@ export const TeacherClassesPage: React.FC = () => {
                               <td className="py-2.5 px-3 text-slate-600 font-mono text-[11px]">
                                 {enr.studentEmail}
                               </td>
+                              <td className="py-2.5 px-3 text-slate-400 font-mono text-[10px]">
+                                {enr.studentId}
+                              </td>
                               <td className="py-2.5 px-3 text-slate-500 font-mono text-[11px]">
                                 {new Date(enr.joinedAt).toLocaleDateString()}
                               </td>
@@ -582,15 +648,25 @@ export const TeacherClassesPage: React.FC = () => {
                                   <ShieldCheck className="w-3 h-3" /> Active
                                 </span>
                               </td>
-                              <td className="py-2.5 px-3 text-right">
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveStudent(enr.id, enr.studentName)}
-                                  className="text-slate-400 hover:text-rose-600 p-1 transition-colors text-[11px] font-medium"
-                                  title="Remove from Section"
-                                >
-                                  <UserX className="w-3.5 h-3.5" />
-                                </button>
+                              <td className="py-2.5 px-3 text-right" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => setViewingStudent(enr)}
+                                    className="p-1 text-slate-400 hover:text-blue-600 transition-colors"
+                                    title="View Student Details"
+                                  >
+                                    <Eye className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveStudent(enr.id, enr.studentName)}
+                                    className="p-1 text-slate-400 hover:text-rose-600 transition-colors"
+                                    title="Remove from Section"
+                                  >
+                                    <UserX className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           ))}
@@ -607,6 +683,69 @@ export const TeacherClassesPage: React.FC = () => {
             )}
           </div>
         </div>
+      )}
+
+      {/* Modal: View Student Details */}
+      {viewingStudent && (
+        <Modal
+          isOpen={!!viewingStudent}
+          onClose={() => setViewingStudent(null)}
+          title="Student Enrollment Details"
+        >
+          <div className="space-y-4 text-xs">
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
+                  {viewingStudent.studentName.charAt(0)}
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900">{viewingStudent.studentName}</h4>
+                  <p className="text-xs text-slate-500 font-mono flex items-center gap-1">
+                    <Mail className="w-3 h-3 text-slate-400" /> {viewingStudent.studentEmail}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-200">
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase font-semibold block">Class</span>
+                  <span className="font-bold text-slate-900 text-xs">{viewingStudent.className}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase font-semibold block">Section</span>
+                  <span className="font-bold text-slate-900 text-xs">{viewingStudent.sectionName}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase font-semibold block">Instructor</span>
+                  <span className="font-bold text-slate-900 text-xs">{viewingStudent.teacherName}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase font-semibold block">Enrolled Date</span>
+                  <span className="font-mono text-slate-900 text-xs flex items-center gap-1">
+                    <Calendar className="w-3 h-3 text-slate-400" />
+                    {new Date(viewingStudent.joinedAt).toLocaleString()}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase font-semibold block">Student ID</span>
+                  <span className="font-mono text-slate-700 text-[11px]">{viewingStudent.studentId}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase font-semibold block">Status</span>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold text-[10px] border border-emerald-200 inline-block mt-0.5">
+                    Active Enrollment
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="secondary" size="sm" onClick={() => setViewingStudent(null)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {/* Modal: Create Class */}
@@ -700,15 +839,16 @@ export const TeacherClassesPage: React.FC = () => {
               <input
                 type="text"
                 required
-                placeholder="e.g. Section B or Batch 2"
+                placeholder="e.g. Section B, Morning Batch, Cohort 2"
                 value={newSectionName}
                 onChange={(e) => setNewSectionName(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:ring-1 focus:ring-blue-500"
               />
             </div>
 
-            <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-[11px] text-blue-800">
-              A unique enrollment code (e.g. {currentClass?.classCode}-BXXXX) will be generated automatically for this section.
+            <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-[11px] flex items-center gap-2">
+              <KeyRound className="w-4 h-4 text-blue-600 flex-shrink-0" />
+              <span>A unique enrollment key will automatically be generated and stored for this section.</span>
             </div>
 
             <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
@@ -716,7 +856,7 @@ export const TeacherClassesPage: React.FC = () => {
                 Cancel
               </Button>
               <Button variant="primary" size="sm" type="submit">
-                Create Section
+                Add Section
               </Button>
             </div>
           </form>

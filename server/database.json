@@ -9,15 +9,24 @@
       "updated_at": "2026-08-29T10:52:59.613Z"
     },
     {
-      "id": "user-1788001010143-rrk4",
-      "email": "sd@gmail.com",
-      "full_name": "SD",
+      "id": "user-1788001639271-y1t1",
+      "email": "aditya@gmail.com",
+      "full_name": "AD",
       "role": "teacher",
-      "created_at": "2026-08-29T10:56:50.143Z",
-      "updated_at": "2026-08-29T10:56:50.143Z"
+      "created_at": "2026-08-29T11:07:19.271Z",
+      "updated_at": "2026-08-29T11:07:19.271Z"
     }
   ],
   "teacherCodes": [
+    {
+      "id": "code-1788001632936",
+      "code": "CHEM-FACULTY-2026-TS9S",
+      "created_for": null,
+      "is_used": true,
+      "created_at": "2026-08-29T11:07:12.936Z",
+      "expires_at": null,
+      "used_by": "ADITYA@GMAIL.COM"
+    },
     {
       "id": "code-1788000993817",
       "code": "CHEM-FACULTY-2026-8CNX",
@@ -26,16 +35,45 @@
       "created_at": "2026-08-29T10:56:33.817Z",
       "expires_at": null,
       "used_by": "SD@GMAIL.COM"
-    },
-    {
-      "id": "code-001",
-      "code": "CHEM-FACULTY-2026-XP9R",
-      "is_used": false,
-      "created_at": "2026-08-29T10:52:59.613Z",
-      "expires_at": null
     }
   ],
   "classes": [
+    {
+      "id": "cls-1788001669870-5a9f",
+      "name": "ADOP",
+      "code": "AS",
+      "teacher_id": "user-1788001639271-y1t1",
+      "teacher_name": "AD",
+      "academic_year": "2026-27",
+      "subject": "Chemistry",
+      "description": "",
+      "created_at": "2026-08-29T11:07:49.870Z",
+      "updated_at": "2026-08-29T11:07:49.870Z"
+    },
+    {
+      "id": "cls-1788001521869-behn",
+      "name": "B.Tech CSE - Chemistry for Engineers",
+      "code": "CSE-CHEM-2026",
+      "teacher_id": "teacher-prof-alok",
+      "teacher_name": "Prof. Alok Verma",
+      "academic_year": "2026-27",
+      "subject": "Chemistry",
+      "description": "Engineering chemistry & atomic structure",
+      "created_at": "2026-08-29T11:05:21.869Z",
+      "updated_at": "2026-08-29T11:05:21.869Z"
+    },
+    {
+      "id": "cls-1788001383292-ff9a",
+      "name": "ASD",
+      "code": "ASD",
+      "teacher_id": "user-1788001010143-rrk4",
+      "teacher_name": "SD",
+      "academic_year": "2026-27",
+      "subject": "Chemistry",
+      "description": "",
+      "created_at": "2026-08-29T11:03:03.292Z",
+      "updated_at": "2026-08-29T11:03:03.292Z"
+    },
     {
       "id": "cls-1788000960138-sojy",
       "name": "Asdfghj",
@@ -87,6 +125,33 @@
   ],
   "sections": [
     {
+      "id": "sec-cls-1788001669870-5a9f-a",
+      "class_id": "cls-1788001669870-5a9f",
+      "className": "ADOP",
+      "name": "Section A",
+      "enrollment_code": "AS-A4E6D",
+      "created_at": "2026-08-29T11:07:49.870Z",
+      "updated_at": "2026-08-29T11:07:49.870Z"
+    },
+    {
+      "id": "sec-cls-1788001521869-behn-a",
+      "class_id": "cls-1788001521869-behn",
+      "className": "B.Tech CSE - Chemistry for Engineers",
+      "name": "Section A",
+      "enrollment_code": "CSE--A2T0Z",
+      "created_at": "2026-08-29T11:05:21.869Z",
+      "updated_at": "2026-08-29T11:05:21.869Z"
+    },
+    {
+      "id": "sec-cls-1788001383292-ff9a-a",
+      "class_id": "cls-1788001383292-ff9a",
+      "className": "ASD",
+      "name": "Section A",
+      "enrollment_code": "ASD-ACZ0Y",
+      "created_at": "2026-08-29T11:03:03.292Z",
+      "updated_at": "2026-08-29T11:03:03.292Z"
+    },
+    {
       "id": "sec-cls-1788000960138-sojy-a",
       "class_id": "cls-1788000960138-sojy",
       "className": "Asdfghj",
@@ -121,9 +186,74 @@
       "enrollment_code": "SZDF-SNYDY",
       "created_at": "2026-08-29T10:55:50.503Z",
       "updated_at": "2026-08-29T10:55:50.503Z"
+    },
+    {
+      "id": "sec-1788001521877-9d9i",
+      "class_id": "cls-1788001521869-behn",
+      "className": "B.Tech CSE - Chemistry for Engineers",
+      "name": "Section B",
+      "enrollment_code": "CSE--SJ7Y7",
+      "created_at": "2026-08-29T11:05:21.877Z",
+      "updated_at": "2026-08-29T11:05:21.877Z"
     }
   ],
   "enrollments": [
+    {
+      "id": "enr-1788001674926-twhi",
+      "studentId": "user-1788001352254-a73y",
+      "studentName": "ADITYA",
+      "studentEmail": "aditya@gmail.con",
+      "classId": "cls-1788001669870-5a9f",
+      "className": "ADOP",
+      "sectionId": "sec-cls-1788001669870-5a9f-a",
+      "sectionName": "Section A",
+      "teacherId": "user-1788001639271-y1t1",
+      "teacherName": "AD",
+      "joinedAt": "2026-08-29T11:07:54.927Z",
+      "status": "active"
+    },
+    {
+      "id": "enr-1788001521903-17cr",
+      "studentId": "stu-rohit-88",
+      "studentName": "Rohit Sharma",
+      "studentEmail": "rohit.student@chem.edu",
+      "classId": "cls-1788001521869-behn",
+      "className": "B.Tech CSE - Chemistry for Engineers",
+      "sectionId": "sec-1788001521877-9d9i",
+      "sectionName": "Section B",
+      "teacherId": "teacher-prof-alok",
+      "teacherName": "Prof. Alok Verma",
+      "joinedAt": "2026-08-29T11:05:21.903Z",
+      "status": "active"
+    },
+    {
+      "id": "enr-1788001521880-rz6o",
+      "studentId": "stu-aditya-99",
+      "studentName": "Aditya Kumar",
+      "studentEmail": "aditya.student@chem.edu",
+      "classId": "cls-1788001521869-behn",
+      "className": "B.Tech CSE - Chemistry for Engineers",
+      "sectionId": "sec-cls-1788001521869-behn-a",
+      "sectionName": "Section A",
+      "teacherId": "teacher-prof-alok",
+      "teacherName": "Prof. Alok Verma",
+      "joinedAt": "2026-08-29T11:05:21.880Z",
+      "status": "active"
+    },
+    {
+      "id": "enr-1788001386663-32w3",
+      "studentId": "user-1788001352254-a73y",
+      "studentName": "ADITYA",
+      "studentEmail": "aditya@gmail.con",
+      "classId": "cls-1788001383292-ff9a",
+      "className": "ASD",
+      "sectionId": "sec-cls-1788001383292-ff9a-a",
+      "sectionName": "Section A",
+      "teacherId": "user-1788001010143-rrk4",
+      "teacherName": "SD",
+      "joinedAt": "2026-08-29T11:03:06.663Z",
+      "status": "active"
+    },
     {
       "id": "enr-1788000950503-pkdr",
       "studentId": "user-1788000384767-uzgt",
@@ -154,6 +284,177 @@
     }
   ],
   "exams": [
+    {
+      "id": "exam-1788001515848-niut",
+      "title": "Organic Chemistry — Unit Test",
+      "courseCode": "ASD",
+      "courseName": "ASD � Chemistry",
+      "teacherId": "user-1788001010143-rrk4",
+      "teacherName": "SD",
+      "classId": "cls-1788001383292-ff9a",
+      "className": "ASD",
+      "sectionId": "sec-cls-1788001383292-ff9a-a",
+      "sectionName": "Section A",
+      "durationMinutes": 60,
+      "totalQuestions": 5,
+      "totalMarks": 16,
+      "passingMarks": 40,
+      "status": "active",
+      "questions": [
+        {
+          "questionText": "Calculate the pH of a 0.01 M HCl solution at 25°C.",
+          "options": [
+            {
+              "label": "A",
+              "text": "pH = 2"
+            },
+            {
+              "label": "B",
+              "text": "pH = 12"
+            },
+            {
+              "label": "C",
+              "text": "pH = 7"
+            },
+            {
+              "label": "D",
+              "text": "pH = 4"
+            }
+          ],
+          "correctAnswer": "A",
+          "explanation": "HCl is a strong acid that fully dissociates. [H⁺] = 0.01 M = 10⁻². pH = -log[H⁺] = -log(10⁻²) = 2.",
+          "topic": "Physical Chemistry",
+          "difficulty": "Easy",
+          "marks": 2,
+          "id": "ai-1788001508972-xndhi",
+          "source": "ai",
+          "needsReview": true,
+          "reviewReason": "AI-generated — teacher review required before publishing."
+        },
+        {
+          "questionText": "Which reagent converts an alkene into a vicinal diol via a syn addition mechanism?",
+          "options": [
+            {
+              "label": "A",
+              "text": "OsO₄ (osmium tetroxide)"
+            },
+            {
+              "label": "B",
+              "text": "Br₂ in CCl₄"
+            },
+            {
+              "label": "C",
+              "text": "HBr (anti-Markovnikov)"
+            },
+            {
+              "label": "D",
+              "text": "KMnO₄ (hot, concentrated)"
+            }
+          ],
+          "correctAnswer": "A",
+          "explanation": "OsO₄ undergoes a concerted [3+2] cycloaddition with the alkene, giving a syn diol via an osmate ester intermediate.",
+          "topic": "Organic Chemistry",
+          "difficulty": "Medium",
+          "marks": 4,
+          "id": "ai-1788001508972-7x4bo",
+          "source": "ai",
+          "needsReview": true,
+          "reviewReason": "AI-generated — teacher review required before publishing."
+        },
+        {
+          "questionText": "Which of these is an example of an electrophilic aromatic substitution?",
+          "options": [
+            {
+              "label": "A",
+              "text": "Nitration of benzene using HNO₃/H₂SO₄"
+            },
+            {
+              "label": "B",
+              "text": "Addition of Br₂ to cyclohexene"
+            },
+            {
+              "label": "C",
+              "text": "Saponification of an ester"
+            },
+            {
+              "label": "D",
+              "text": "Aldol condensation"
+            }
+          ],
+          "correctAnswer": "A",
+          "explanation": "Nitration of benzene involves attack by the nitronium ion (NO₂⁺) as electrophile on the aromatic ring, a classic EAS reaction.",
+          "topic": "Organic Chemistry",
+          "difficulty": "Medium",
+          "marks": 4,
+          "id": "ai-1788001508972-6wouh",
+          "source": "ai",
+          "needsReview": true,
+          "reviewReason": "AI-generated — teacher review required before publishing."
+        },
+        {
+          "questionText": "What is the IUPAC name for CH₃-CH(OH)-COOH?",
+          "options": [
+            {
+              "label": "A",
+              "text": "2-hydroxypropanoic acid"
+            },
+            {
+              "label": "B",
+              "text": "3-hydroxypropanoic acid"
+            },
+            {
+              "label": "C",
+              "text": "Acetic acid"
+            },
+            {
+              "label": "D",
+              "text": "2-methylmalonic acid"
+            }
+          ],
+          "correctAnswer": "A",
+          "explanation": "The parent chain is propanoic acid (3 carbons with COOH). The OH group is at C-2, giving 2-hydroxypropanoic acid (lactic acid).",
+          "topic": "Organic Chemistry",
+          "difficulty": "Easy",
+          "marks": 2,
+          "id": "ai-1788001508972-hxhur",
+          "source": "ai",
+          "needsReview": true,
+          "reviewReason": "AI-generated — teacher review required before publishing."
+        },
+        {
+          "questionText": "Which of the following has the highest lattice enthalpy?",
+          "options": [
+            {
+              "label": "A",
+              "text": "MgO"
+            },
+            {
+              "label": "B",
+              "text": "NaCl"
+            },
+            {
+              "label": "C",
+              "text": "KBr"
+            },
+            {
+              "label": "D",
+              "text": "CsI"
+            }
+          ],
+          "correctAnswer": "A",
+          "explanation": "Lattice enthalpy ∝ (charge product)/(ionic radius sum). MgO has Mg²⁺ and O²⁻ giving charge product = 4, much higher than Na⁺Cl⁻ (product = 1).",
+          "topic": "Chemical Bonding",
+          "difficulty": "Medium",
+          "marks": 4,
+          "id": "ai-1788001508972-h32lh",
+          "source": "ai",
+          "needsReview": true,
+          "reviewReason": "AI-generated — teacher review required before publishing."
+        }
+      ],
+      "created_at": "2026-08-29T11:05:15.858Z",
+      "updated_at": "2026-08-29T11:05:15.858Z"
+    },
     {
       "id": "exam-sample-001",
       "title": "Chemical Kinetics & Thermodynamics Midterm",
