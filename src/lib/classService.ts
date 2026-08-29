@@ -44,7 +44,7 @@ export const fetchClassesFromDB = async (teacherId?: string): Promise<AcademicCl
   try {
     if (isSupabaseConfigured()) {
       let query = supabase.from('classes').select('*, profiles:teacher_id(full_name, email)');
-      if (teacherId) {
+      if (teacherId && !teacherId.startsWith('user-')) {
         query = query.eq('teacher_id', teacherId);
       }
       const { data, error } = await query;
@@ -55,7 +55,7 @@ export const fetchClassesFromDB = async (teacherId?: string): Promise<AcademicCl
           teacherName: d.profiles?.full_name || 'Faculty Member',
           name: d.name,
           classCode: d.code,
-          academicYear: '2026-27',
+          academicYear: d.academic_year || '2026-27',
           description: d.description || '',
           createdAt: d.created_at,
         }));
@@ -83,7 +83,27 @@ export const createClass = async (
   description?: string
 ): Promise<AcademicClass> => {
   const cleanCode = classCode.trim().toUpperCase();
-  const newClassId = `cls-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+  let newClassId = `cls-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+
+  // 1. Write to PostgreSQL Database via Supabase if configured
+  if (isSupabaseConfigured() && teacherId && !teacherId.startsWith('user-')) {
+    try {
+      const { data, error } = await supabase.from('classes').insert({
+        name: name.trim(),
+        code: cleanCode,
+        teacher_id: teacherId,
+        subject: 'Chemistry',
+        academic_year: academicYear.trim() || '2026-27',
+        description: description?.trim() || '',
+      }).select().single();
+
+      if (!error && data) {
+        newClassId = data.id;
+      }
+    } catch (err) {
+      console.warn('DB createClass fallback:', err);
+    }
+  }
 
   const newClass: AcademicClass = {
     id: newClassId,
@@ -96,38 +116,19 @@ export const createClass = async (
     createdAt: new Date().toISOString(),
   };
 
-  // 1. Write to PostgreSQL Database via Supabase if configured
-  if (isSupabaseConfigured()) {
-    try {
-      const { data, error } = await supabase.from('classes').insert({
-        name: newClass.name,
-        code: newClass.classCode,
-        teacher_id: teacherId,
-        subject: 'Chemistry',
-        description: newClass.description,
-      }).select().single();
-
-      if (!error && data) {
-        newClass.id = data.id;
-      }
-    } catch (err) {
-      console.warn('DB createClass fallback:', err);
-    }
-  }
-
   // 2. Update persistent cache
   const classes = getStoredClasses();
   classes.unshift(newClass);
   saveStoredClasses(classes);
 
-  // 3. Automatically create initial Section A
+  // 3. Automatically create initial Section A with database persistence
   await createSection(newClass.id, newClass.name, 'Section A', newClass.classCode);
 
   return newClass;
 };
 
 export const deleteClass = async (classId: string): Promise<void> => {
-  if (isSupabaseConfigured()) {
+  if (isSupabaseConfigured() && !classId.startsWith('cls-')) {
     try {
       await supabase.from('classes').delete().eq('id', classId);
     } catch (err) {
@@ -169,6 +170,33 @@ export const saveStoredSections = (sections: AcademicSection[]): void => {
   }
 };
 
+export const fetchSectionsFromDB = async (classId?: string): Promise<AcademicSection[]> => {
+  try {
+    if (isSupabaseConfigured()) {
+      let query = supabase.from('sections').select('*, classes:class_id(name, code)');
+      if (classId && !classId.startsWith('cls-')) {
+        query = query.eq('class_id', classId);
+      }
+      const { data, error } = await query;
+      if (!error && data) {
+        const mapped: AcademicSection[] = data.map((d: any) => ({
+          id: d.id,
+          classId: d.class_id,
+          className: d.classes?.name || 'Class',
+          name: d.name,
+          enrollmentCode: d.enrollment_code,
+          createdAt: d.created_at,
+        }));
+        saveStoredSections(mapped);
+        return mapped;
+      }
+    }
+  } catch (err) {
+    console.warn('DB fetch sections fallback:', err);
+  }
+  return getStoredSections(classId);
+};
+
 export const getSectionById = (sectionId: string): AcademicSection | null => {
   const sections = getStoredSections();
   return sections.find((s) => s.id === sectionId) || null;
@@ -180,7 +208,7 @@ export const getSectionByCode = (code: string): AcademicSection | null => {
   const stripped = clean.replace(/[^A-Z0-9]/g, '');
   const sections = getStoredSections();
 
-  // First check sections
+  // 1. Exact match or stripped match on section enrollmentCode
   const foundSec = sections.find((s) => {
     const secClean = s.enrollmentCode.toUpperCase();
     const secStripped = secClean.replace(/[^A-Z0-9]/g, '');
@@ -194,7 +222,7 @@ export const getSectionByCode = (code: string): AcademicSection | null => {
 
   if (foundSec) return foundSec;
 
-  // Also match against Class Code directly
+  // 2. Also match against Class Code directly
   const classes = getStoredClasses();
   const foundClass = classes.find((c) => {
     const clsClean = c.classCode.toUpperCase();
@@ -219,13 +247,32 @@ export const createSection = async (
   const sections = getStoredSections();
   const cls = getClassById(classId);
   const codePrefix = classCode || cls?.classCode || 'CHEM';
+  const enrollmentCode = generateEnrollmentCode(codePrefix, name.trim());
+  let newSectionId = `sec-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+
+  // 1. Insert into Supabase sections table if configured
+  if (isSupabaseConfigured() && !classId.startsWith('cls-')) {
+    try {
+      const { data, error } = await supabase.from('sections').insert({
+        class_id: classId,
+        name: name.trim(),
+        enrollment_code: enrollmentCode,
+      }).select().single();
+
+      if (!error && data) {
+        newSectionId = data.id;
+      }
+    } catch (err) {
+      console.warn('DB createSection error:', err);
+    }
+  }
 
   const newSection: AcademicSection = {
-    id: `sec-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    id: newSectionId,
     classId,
     className: className || cls?.name || 'Class',
     name: name.trim(),
-    enrollmentCode: generateEnrollmentCode(codePrefix, name.trim()),
+    enrollmentCode,
     createdAt: new Date().toISOString(),
   };
 
@@ -234,7 +281,7 @@ export const createSection = async (
   return newSection;
 };
 
-export const regenerateSectionCode = (sectionId: string): string => {
+export const regenerateSectionCode = async (sectionId: string): Promise<string> => {
   const sections = getStoredSections();
   const idx = sections.findIndex((s) => s.id === sectionId);
   if (idx < 0) return '';
@@ -242,11 +289,28 @@ export const regenerateSectionCode = (sectionId: string): string => {
   const cls = getClassById(sections[idx].classId);
   const newCode = generateEnrollmentCode(cls?.classCode || 'CHEM', sections[idx].name);
   sections[idx].enrollmentCode = newCode;
+
+  if (isSupabaseConfigured() && !sectionId.startsWith('sec-')) {
+    try {
+      await supabase.from('sections').update({ enrollment_code: newCode }).eq('id', sectionId);
+    } catch (err) {
+      console.warn('DB regenerateSectionCode error:', err);
+    }
+  }
+
   saveStoredSections(sections);
   return newCode;
 };
 
-export const deleteSection = (sectionId: string): void => {
+export const deleteSection = async (sectionId: string): Promise<void> => {
+  if (isSupabaseConfigured() && !sectionId.startsWith('sec-')) {
+    try {
+      await supabase.from('sections').delete().eq('id', sectionId);
+    } catch (err) {
+      console.warn('DB deleteSection error:', err);
+    }
+  }
+
   const sections = getStoredSections().filter((s) => s.id !== sectionId);
   saveStoredSections(sections);
 
@@ -301,8 +365,8 @@ export const saveStoredEnrollments = (enrollments: ClassEnrollment[]): void => {
 export const fetchEnrollmentsFromDB = async (studentId?: string): Promise<ClassEnrollment[]> => {
   try {
     if (isSupabaseConfigured()) {
-      let query = supabase.from('class_members').select('*, classes:class_id(*, profiles:teacher_id(*)), profiles:student_id(*)');
-      if (studentId) {
+      let query = supabase.from('class_members').select('*, classes:class_id(*, profiles:teacher_id(*)), sections:section_id(*), profiles:student_id(*)');
+      if (studentId && !studentId.startsWith('user-')) {
         query = query.eq('student_id', studentId);
       }
       const { data, error } = await query;
@@ -314,8 +378,8 @@ export const fetchEnrollmentsFromDB = async (studentId?: string): Promise<ClassE
           studentEmail: d.profiles?.email || '',
           classId: d.class_id,
           className: d.classes?.name || 'Class',
-          sectionId: `sec-${d.class_id}`,
-          sectionName: 'Section A',
+          sectionId: d.section_id || `sec-${d.class_id}`,
+          sectionName: d.sections?.name || 'Section A',
           teacherId: d.classes?.teacher_id || '',
           teacherName: d.classes?.profiles?.full_name || 'Faculty Member',
           joinedAt: d.joined_at,
@@ -337,52 +401,86 @@ export const joinClassByCode = async (
   studentEmail: string,
   enrollmentCode: string
 ): Promise<{ success: boolean; error?: string; enrollment?: ClassEnrollment; className?: string; sectionName?: string }> => {
-  const code = enrollmentCode.trim().toUpperCase();
-  if (!code) {
-    return { success: false, error: 'Please enter a valid section enrollment code.' };
+  if (!enrollmentCode || !enrollmentCode.trim()) {
+    return { success: false, error: 'Please enter a valid section enrollment code (e.g. XYZ-STUQ9).' };
   }
 
-  // 1. Resolve Section & Class from DB / Cache
-  let section = getSectionByCode(code);
-  let cls: AcademicClass | null = section ? getClassById(section.classId) : null;
+  const cleanCode = enrollmentCode.trim().toUpperCase();
 
-  if (isSupabaseConfigured() && (!section || !cls)) {
+  // 1. Direct PostgreSQL / Supabase Database Lookups
+  let section: AcademicSection | null = null;
+  let cls: AcademicClass | null = null;
+
+  if (isSupabaseConfigured()) {
     try {
-      const { data: dbClass } = await supabase
-        .from('classes')
-        .select('*, profiles:teacher_id(full_name, email)')
-        .eq('code', code)
-        .single();
+      // Step A: Search sections table by enrollment_code
+      const { data: dbSection, error: secErr } = await supabase
+        .from('sections')
+        .select('*, classes:class_id(*, profiles:teacher_id(id, full_name, email))')
+        .ilike('enrollment_code', cleanCode)
+        .maybeSingle();
 
-      if (dbClass) {
+      if (!secErr && dbSection) {
+        const parentClass = dbSection.classes;
         cls = {
-          id: dbClass.id,
-          teacherId: dbClass.teacher_id,
-          teacherName: dbClass.profiles?.full_name || 'Faculty Member',
-          name: dbClass.name,
-          classCode: dbClass.code,
-          academicYear: '2026-27',
-          description: dbClass.description || '',
-          createdAt: dbClass.created_at,
+          id: parentClass.id,
+          teacherId: parentClass.teacher_id,
+          teacherName: parentClass.profiles?.full_name || 'Faculty Member',
+          name: parentClass.name,
+          classCode: parentClass.code,
+          academicYear: parentClass.academic_year || '2026-27',
+          description: parentClass.description || '',
+          createdAt: parentClass.created_at,
         };
         section = {
-          id: `sec-${dbClass.id}`,
-          classId: dbClass.id,
-          className: dbClass.name,
-          name: 'Section A',
-          enrollmentCode: dbClass.code,
-          createdAt: dbClass.created_at,
+          id: dbSection.id,
+          classId: dbSection.class_id,
+          className: parentClass.name,
+          name: dbSection.name,
+          enrollmentCode: dbSection.enrollment_code,
+          createdAt: dbSection.created_at,
         };
-        const allCls = getStoredClasses();
-        allCls.unshift(cls);
-        saveStoredClasses(allCls);
-        const allSec = getStoredSections();
-        allSec.unshift(section);
-        saveStoredSections(allSec);
+      }
+
+      // Step B: If not matched in sections, search classes table by code
+      if (!section || !cls) {
+        const { data: dbClass } = await supabase
+          .from('classes')
+          .select('*, profiles:teacher_id(id, full_name, email), sections(*)')
+          .ilike('code', cleanCode)
+          .maybeSingle();
+
+        if (dbClass) {
+          cls = {
+            id: dbClass.id,
+            teacherId: dbClass.teacher_id,
+            teacherName: dbClass.profiles?.full_name || 'Faculty Member',
+            name: dbClass.name,
+            classCode: dbClass.code,
+            academicYear: dbClass.academic_year || '2026-27',
+            description: dbClass.description || '',
+            createdAt: dbClass.created_at,
+          };
+          const firstSec = dbClass.sections?.[0];
+          section = {
+            id: firstSec?.id || `sec-${dbClass.id}`,
+            classId: dbClass.id,
+            className: dbClass.name,
+            name: firstSec?.name || 'Section A',
+            enrollmentCode: firstSec?.enrollment_code || dbClass.code,
+            createdAt: dbClass.created_at,
+          };
+        }
       }
     } catch (err) {
-      console.warn('DB joinClass check:', err);
+      console.warn('DB joinClass query error:', err);
     }
+  }
+
+  // 2. Fallback to Local Persistent Cache if not resolved from DB
+  if (!section || !cls) {
+    section = getSectionByCode(cleanCode);
+    cls = section ? getClassById(section.classId) : null;
   }
 
   if (!section || !cls) {
@@ -392,7 +490,19 @@ export const joinClassByCode = async (
     };
   }
 
-  // 2. Check Duplicate Enrollment
+  // Synchronize found class & section into local cache
+  const allCls = getStoredClasses();
+  if (!allCls.some((c) => c.id === cls!.id)) {
+    allCls.unshift(cls);
+    saveStoredClasses(allCls);
+  }
+  const allSec = getStoredSections();
+  if (!allSec.some((s) => s.id === section!.id)) {
+    allSec.unshift(section);
+    saveStoredSections(allSec);
+  }
+
+  // 3. Check Duplicate Enrollment
   const existing = getStoredEnrollments({ sectionId: section.id }).filter(
     (e) =>
       (studentId && e.studentId === studentId) ||
@@ -402,14 +512,15 @@ export const joinClassByCode = async (
     return { success: false, error: `You are already enrolled in ${cls.name} (${section.name}).` };
   }
 
-  // 3. Insert into PostgreSQL Database if configured
+  // 4. Insert into PostgreSQL Database if configured
   const effectiveStudentId = studentId || `stu-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
   let enrollmentId = `enr-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
 
-  if (isSupabaseConfigured() && studentId) {
+  if (isSupabaseConfigured() && studentId && !studentId.startsWith('user-')) {
     try {
       const { data: memberData, error: memberErr } = await supabase.from('class_members').insert({
         class_id: cls.id,
+        section_id: section.id.startsWith('sec-') ? null : section.id,
         student_id: studentId,
       }).select().single();
 
@@ -449,7 +560,7 @@ export const joinClassByCode = async (
 };
 
 export const removeStudentFromSection = async (enrollmentId: string): Promise<void> => {
-  if (isSupabaseConfigured()) {
+  if (isSupabaseConfigured() && !enrollmentId.startsWith('enr-')) {
     try {
       await supabase.from('class_members').delete().eq('id', enrollmentId);
     } catch (err) {

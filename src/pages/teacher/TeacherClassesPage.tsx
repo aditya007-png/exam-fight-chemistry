@@ -13,10 +13,12 @@ import {
   createClass,
   deleteClass,
   getStoredSections,
+  fetchSectionsFromDB,
   createSection,
   regenerateSectionCode,
   deleteSection,
   getStoredEnrollments,
+  fetchEnrollmentsFromDB,
   removeStudentFromSection,
 } from '../../lib/classService';
 import { Button } from '../../components/common/Button';
@@ -79,6 +81,7 @@ export const TeacherClassesPage: React.FC = () => {
       const activeClsId = selectedClassId || clsList[0].id;
       if (!selectedClassId) setSelectedClassId(activeClsId);
 
+      await fetchSectionsFromDB(activeClsId);
       const secList = getStoredSections(activeClsId);
       setSections(secList);
 
@@ -86,6 +89,7 @@ export const TeacherClassesPage: React.FC = () => {
       if (!selectedSectionId && activeSecId) setSelectedSectionId(activeSecId);
 
       if (activeSecId) {
+        await fetchEnrollmentsFromDB();
         const enrList = getStoredEnrollments({ sectionId: activeSecId });
         setEnrollments(enrList);
       } else {
@@ -101,8 +105,9 @@ export const TeacherClassesPage: React.FC = () => {
     loadData();
   }, [teacherId, selectedClassId, selectedSectionId]);
 
-  const handleSelectClass = (clsId: string) => {
+  const handleSelectClass = async (clsId: string) => {
     setSelectedClassId(clsId);
+    await fetchSectionsFromDB(clsId);
     const secList = getStoredSections(clsId);
     setSections(secList);
     if (secList.length > 0) {
@@ -165,10 +170,10 @@ export const TeacherClassesPage: React.FC = () => {
     setTimeout(() => setCopiedCode(null), 2500);
   };
 
-  const handleRegenerateCode = (secId: string) => {
+  const handleRegenerateCode = async (secId: string) => {
     if (window.confirm('Regenerating will invalidate the previous code for new students. Continue?')) {
-      const newCode = regenerateSectionCode(secId);
-      loadData();
+      const newCode = await regenerateSectionCode(secId);
+      await loadData();
       setSuccessToast(`New enrollment code generated: ${newCode}`);
       setTimeout(() => setSuccessToast(null), 3500);
     }
@@ -185,20 +190,20 @@ export const TeacherClassesPage: React.FC = () => {
     }
   };
 
-  const handleDeleteSection = (secId: string, name: string) => {
+  const handleDeleteSection = async (secId: string, name: string) => {
     if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
-      deleteSection(secId);
+      await deleteSection(secId);
       setSelectedSectionId(null);
-      loadData();
+      await loadData();
       setSuccessToast(`Section "${name}" deleted.`);
       setTimeout(() => setSuccessToast(null), 3500);
     }
   };
 
-  const handleRemoveStudent = (enrId: string, studentName: string) => {
+  const handleRemoveStudent = async (enrId: string, studentName: string) => {
     if (window.confirm(`Remove student ${studentName} from this section?`)) {
-      removeStudentFromSection(enrId);
-      loadData();
+      await removeStudentFromSection(enrId);
+      await loadData();
       setSuccessToast(`Removed ${studentName} from section.`);
       setTimeout(() => setSuccessToast(null), 3500);
     }
