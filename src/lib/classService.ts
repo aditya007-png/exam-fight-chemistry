@@ -346,7 +346,12 @@ export const getStoredEnrollments = (filters?: {
     let list: ClassEnrollment[] = JSON.parse(raw);
 
     if (filters?.sectionId) {
-      list = list.filter((e) => e.sectionId === filters.sectionId);
+      const targetSec = getSectionById(filters.sectionId);
+      list = list.filter(
+        (e) =>
+          e.sectionId === filters.sectionId ||
+          (targetSec && e.classId === targetSec.classId)
+      );
     }
     if (filters?.studentId || filters?.studentEmail) {
       list = list.filter((e) =>
@@ -384,20 +389,26 @@ export const fetchEnrollmentsFromDB = async (studentId?: string): Promise<ClassE
       }
       const { data, error } = await query;
       if (!error && data) {
-        const mapped: ClassEnrollment[] = data.map((d: any) => ({
-          id: d.id,
-          studentId: d.student_id,
-          studentName: d.profiles?.full_name || 'Student',
-          studentEmail: d.profiles?.email || '',
-          classId: d.class_id,
-          className: d.classes?.name || 'Class',
-          sectionId: d.section_id || `sec-${d.class_id}`,
-          sectionName: d.sections?.name || 'Section A',
-          teacherId: d.classes?.teacher_id || '',
-          teacherName: d.classes?.profiles?.full_name || 'Faculty Member',
-          joinedAt: d.joined_at,
-          status: 'active',
-        }));
+        const mapped: ClassEnrollment[] = data.map((d: any) => {
+          const cls = d.classes;
+          const sec = d.sections;
+          const prof = d.profiles;
+          const teacherProf = cls?.profiles;
+          return {
+            id: d.id,
+            studentId: d.student_id,
+            studentName: prof?.full_name || 'Student',
+            studentEmail: prof?.email || '',
+            classId: d.class_id,
+            className: cls?.name || 'Class',
+            sectionId: d.section_id || (sec ? sec.id : `sec-${d.class_id}`),
+            sectionName: sec?.name || 'Section A',
+            teacherId: cls?.teacher_id || '',
+            teacherName: teacherProf?.full_name || 'Faculty Member',
+            joinedAt: d.joined_at,
+            status: 'active',
+          };
+        });
         saveStoredEnrollments(mapped);
         return mapped;
       }
@@ -415,7 +426,7 @@ export const joinClassByCode = async (
   enrollmentCode: string
 ): Promise<{ success: boolean; error?: string; enrollment?: ClassEnrollment; className?: string; sectionName?: string }> => {
   if (!enrollmentCode || !enrollmentCode.trim()) {
-    return { success: false, error: 'Please enter a valid section enrollment code (e.g. XYZ-STUQ9).' };
+    return { success: false, error: 'Please enter a valid section enrollment code.' };
   }
 
   const cleanCode = enrollmentCode.trim().toUpperCase();
@@ -496,7 +507,7 @@ export const joinClassByCode = async (
     cls = section ? getClassById(section.classId) : null;
   }
 
-  // 3. Resilient Dynamic Resolution for Valid Institutional Academic Keys (e.g. CHE-SPOLQ)
+  // 3. Resilient Dynamic Resolution for Valid Institutional Academic Keys
   if (!section || !cls) {
     const parts = cleanCode.split('-');
     const classPrefix = parts[0] || 'CHEM';
@@ -550,7 +561,7 @@ export const joinClassByCode = async (
     saveStoredSections(allSec);
   }
 
-  // 3. Check Duplicate Enrollment
+  // 4. Check Duplicate Enrollment
   const existing = getStoredEnrollments({ sectionId: section.id }).filter(
     (e) =>
       (studentId && e.studentId === studentId) ||
@@ -560,7 +571,7 @@ export const joinClassByCode = async (
     return { success: false, error: `You are already enrolled in ${cls.name} (${section.name}).` };
   }
 
-  // 4. Insert into PostgreSQL Database if configured
+  // 5. Insert into PostgreSQL Database if configured
   const effectiveStudentId = studentId || `stu-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
   let enrollmentId = `enr-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
 
@@ -651,15 +662,38 @@ export const getStudentEnrolledClasses = (studentId: string, studentEmail?: stri
   }> = [];
 
   for (const enr of enrollments) {
-    const cls = getClassById(enr.classId);
-    const sec = getSectionById(enr.sectionId);
-    if (cls && sec) {
-      result.push({
-        class: cls,
-        section: sec,
-        enrollment: enr,
-      });
+    let cls = getClassById(enr.classId);
+    let sec = getSectionById(enr.sectionId);
+
+    if (!cls) {
+      cls = {
+        id: enr.classId,
+        teacherId: enr.teacherId,
+        teacherName: enr.teacherName || 'Faculty Instructor',
+        name: enr.className || 'Chemistry Class',
+        classCode: 'CHEM',
+        academicYear: '2026-27',
+        description: '',
+        createdAt: enr.joinedAt,
+      };
     }
+
+    if (!sec) {
+      sec = {
+        id: enr.sectionId,
+        classId: enr.classId,
+        className: enr.className,
+        name: enr.sectionName || 'Section A',
+        enrollmentCode: 'ACTIVE',
+        createdAt: enr.joinedAt,
+      };
+    }
+
+    result.push({
+      class: cls,
+      section: sec,
+      enrollment: enr,
+    });
   }
 
   return result;
