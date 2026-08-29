@@ -23,6 +23,7 @@ import { StudentExamsPage } from './pages/student/StudentExamsPage';
 import { ExamPlayerPage } from './pages/student/ExamPlayerPage';
 import { PeriodicTablePage } from './pages/student/PeriodicTablePage';
 import { StudentResultsPage } from './pages/student/StudentResultsPage';
+import { StudentRequestsPage } from './pages/student/StudentRequestsPage';
 import { ExamResultDetailPage } from './pages/student/ExamResultDetailPage';
 
 // Teacher Pages
@@ -119,6 +120,18 @@ export const App: React.FC = () => {
                 <RoleGuard allowedRoles={['student']}>
                   <DashboardLayout>
                     <StudentExamsPage />
+                  </DashboardLayout>
+                </RoleGuard>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/requests"
+            element={
+              <ProtectedRoute>
+                <RoleGuard allowedRoles={['student']}>
+                  <DashboardLayout>
+                    <StudentRequestsPage />
                   </DashboardLayout>
                 </RoleGuard>
               </ProtectedRoute>

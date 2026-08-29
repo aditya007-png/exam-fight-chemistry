@@ -59,6 +59,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       { label: 'Home', path: '/student/dashboard', icon: LayoutDashboard },
       { label: 'My Classes', path: '/student/classes', icon: GraduationCap },
       { label: 'My Exams', path: '/student/exams', icon: FileText },
+      { label: 'My Requests', path: '/student/requests', icon: Inbox },
       { label: 'Periodic Table', path: '/student/periodic-table', icon: Atom },
       { label: 'Results', path: '/student/results', icon: Award },
       { label: 'Profile', path: '/student/profile', icon: User },

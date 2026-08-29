@@ -15,15 +15,17 @@ app.use(express.json({ limit: '50mb' }));
 function readDB() {
   try {
     if (!fs.existsSync(DB_FILE)) {
-      const initial = { users: [], teacherCodes: [], classes: [], sections: [], enrollments: [], exams: [], attempts: [], evidence: [] };
+      const initial = { users: [], teacherCodes: [], classes: [], sections: [], enrollments: [], exams: [], attempts: [], evidence: [], requests: [] };
       fs.writeFileSync(DB_FILE, JSON.stringify(initial, null, 2), 'utf8');
       return initial;
     }
     const raw = fs.readFileSync(DB_FILE, 'utf8');
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (!parsed.requests) parsed.requests = [];
+    return parsed;
   } catch (err) {
     console.error('DB read error:', err);
-    return { users: [], teacherCodes: [], classes: [], sections: [], enrollments: [], exams: [], attempts: [], evidence: [] };
+    return { users: [], teacherCodes: [], classes: [], sections: [], enrollments: [], exams: [], attempts: [], evidence: [], requests: [] };
   }
 }
 
@@ -382,8 +384,8 @@ app.post('/api/classes/join', (req, res) => {
     return res.status(400).json({ error: `You are already enrolled in ${cls.name} (${section.name}).` });
   }
 
-  const teacherUser = db.users.find(u => u.id === cls.teacher_id || u.role === 'teacher');
-  const actualTeacherName = teacherUser?.full_name || cls.teacher_name || 'Dr. Jatin Sharma';
+  const teacherUser = db.users.find(u => u.id === cls.teacher_id);
+  const actualTeacherName = cls.teacher_name || teacherUser?.full_name || 'Dr. Jatin Sharma';
 
   const newEnrollment = {
     id: `enr-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -700,8 +702,8 @@ app.post('/api/exams', (req, res) => {
     sectionName = sec.name;
   }
 
-  const teacherUser = db.users.find(u => u.id === teacherId || u.role === 'teacher');
-  const actualTeacherName = teacherUser?.full_name || examData.teacherName || 'Faculty Instructor';
+  const teacherUser = db.users.find(u => u.id === teacherId);
+  const actualTeacherName = examData.teacherName || teacherUser?.full_name || 'Faculty Instructor';
 
   let safeStatus = (examData.status || 'published').toLowerCase();
   if (safeStatus === 'active') safeStatus = 'published';
@@ -1119,6 +1121,156 @@ app.get('/api/evidence/review', (req, res) => {
     evidenceList,
     proctoringTimeline
   });
+});
+
+// ── 10. Student Requests & Teacher Actions (STEP 4 CORE) ─────────────────────
+
+app.post('/api/requests', (req, res) => {
+  const { studentId, studentName, studentEmail, examId, attemptId, requestType, message } = req.body;
+  if (!studentId || !examId || !message || !message.trim()) {
+    return res.status(400).json({ error: 'studentId, examId, and message are required.' });
+  }
+
+  const db = readDB();
+  const exam = db.exams.find(e => e.id === examId);
+  if (!exam) return res.status(404).json({ error: 'Exam not found.' });
+
+  // Security: If attemptId provided, verify it belongs to this student
+  if (attemptId) {
+    const attempt = db.attempts.find(a => a.id === attemptId);
+    if (!attempt) {
+      return res.status(404).json({ error: 'Attempt not found.' });
+    }
+    if (attempt.studentId !== studentId) {
+      return res.status(403).json({ error: 'Forbidden: You cannot create a request referencing another student\'s attempt.' });
+    }
+  }
+
+  // Prevent duplicate pending request
+  const existingPending = db.requests.find(r =>
+    r.studentId === studentId &&
+    r.examId === examId &&
+    (attemptId ? r.attemptId === attemptId : true) &&
+    r.requestType === (requestType || 'EXAM_EXITED') &&
+    r.status === 'PENDING'
+  );
+
+  if (existingPending) {
+    return res.status(400).json({
+      error: 'You already have a pending request for this examination. Please wait for your instructor to review it.'
+    });
+  }
+
+  // Resolve Student Info
+  const studentUser = db.users.find(u => u.id === studentId);
+  const realStudentName = studentName || studentUser?.full_name || 'Student Candidate';
+  const realStudentEmail = studentEmail || studentUser?.email || '';
+
+  // Resolve Teacher Info
+  const teacherUser = db.users.find(u => u.id === exam.teacherId);
+  const realTeacherName = exam.teacherName || (teacherUser && teacherUser.full_name) || 'Faculty Instructor';
+
+  const newRequest = {
+    id: `req-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    studentId,
+    studentName: realStudentName,
+    studentEmail: realStudentEmail,
+    teacherId: exam.teacherId,
+    teacherName: realTeacherName,
+    classId: exam.classId || '',
+    className: exam.className || 'Class',
+    sectionId: exam.sectionId || '',
+    sectionName: exam.sectionName || 'Section A',
+    examId,
+    examTitle: exam.title,
+    attemptId: attemptId || null,
+    requestType: requestType || 'EXAM_EXITED',
+    message: message.trim(),
+    status: 'PENDING',
+    teacherResponse: null,
+    resolvedAt: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  db.requests.unshift(newRequest);
+  writeDB(db);
+
+  res.json({ success: true, request: newRequest });
+});
+
+app.get('/api/requests', (req, res) => {
+  const { teacherId, studentId, status, examId } = req.query;
+  const db = readDB();
+  let list = db.requests;
+
+  if (teacherId) {
+    list = list.filter(r => r.teacherId === teacherId);
+  }
+  if (studentId) {
+    list = list.filter(r => r.studentId === studentId);
+  }
+  if (status && status !== 'ALL') {
+    list = list.filter(r => r.status === status);
+  }
+  if (examId) {
+    list = list.filter(r => r.examId === examId);
+  }
+
+  res.json({ success: true, requests: list });
+});
+
+app.get('/api/requests/:id', (req, res) => {
+  const { id } = req.params;
+  const { studentId, teacherId } = req.query;
+  const db = readDB();
+  const request = db.requests.find(r => r.id === id);
+  if (!request) return res.status(404).json({ error: 'Request not found.' });
+
+  if (studentId && request.studentId !== studentId) {
+    return res.status(403).json({ error: 'Forbidden: You cannot access another student\'s request.' });
+  }
+
+  if (teacherId && request.teacherId !== teacherId) {
+    return res.status(403).json({ error: 'Forbidden: You cannot access requests from another instructor\'s students.' });
+  }
+
+  res.json({ success: true, request });
+});
+
+app.put('/api/requests/:id/action', (req, res) => {
+  const { id } = req.params;
+  const { teacherId, status, teacherResponse } = req.body;
+  const db = readDB();
+  const request = db.requests.find(r => r.id === id);
+  if (!request) return res.status(404).json({ error: 'Request not found.' });
+
+  if (teacherId && request.teacherId !== teacherId) {
+    return res.status(403).json({ error: 'Forbidden: You are not authorized to update another instructor\'s requests.' });
+  }
+
+  const validStatuses = ['PENDING', 'APPROVED', 'REJECTED', 'RESOLVED'];
+  if (status && !validStatuses.includes(status)) {
+    return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
+  }
+
+  if (status) request.status = status;
+  if (teacherResponse !== undefined) request.teacherResponse = teacherResponse;
+  request.resolvedAt = (status === 'APPROVED' || status === 'RESOLVED' || status === 'REJECTED')
+    ? new Date().toISOString()
+    : null;
+  request.updatedAt = new Date().toISOString();
+
+  // If approved and attemptId is linked, ensure attempt is unlocked for re-entry
+  if (status === 'APPROVED' && request.attemptId) {
+    const attempt = db.attempts.find(a => a.id === request.attemptId);
+    if (attempt && attempt.status === 'in_progress') {
+      attempt.updated_at = new Date().toISOString();
+    }
+  }
+
+  writeDB(db);
+  res.json({ success: true, request });
 });
 
 // ── Start Express Server ──────────────────────────────────────────────────────
