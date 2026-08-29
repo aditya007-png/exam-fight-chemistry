@@ -47,6 +47,18 @@
   ],
   "classes": [
     {
+      "id": "cls-1788002495489-bmsk",
+      "name": "B.Tech CSE - Inorganic Chemistry",
+      "code": "CSE-CHEM-301",
+      "teacher_id": "teacher-step3-alok-1788002495454",
+      "teacher_name": "Prof. Alok Verma",
+      "academic_year": "2026-27",
+      "subject": "Chemistry",
+      "description": "",
+      "created_at": "2026-08-29T11:21:35.489Z",
+      "updated_at": "2026-08-29T11:21:35.490Z"
+    },
+    {
       "id": "cls-1788002305410-h201",
       "name": "B.Tech CSE - Chemistry for Engineers",
       "code": "CSE-CHEM-2026",
@@ -168,6 +180,15 @@
     }
   ],
   "sections": [
+    {
+      "id": "sec-cls-1788002495489-bmsk-a",
+      "class_id": "cls-1788002495489-bmsk",
+      "className": "B.Tech CSE - Inorganic Chemistry",
+      "name": "Section A",
+      "enrollment_code": "CSE--A5MK5",
+      "created_at": "2026-08-29T11:21:35.490Z",
+      "updated_at": "2026-08-29T11:21:35.490Z"
+    },
     {
       "id": "sec-cls-1788002305410-h201-a",
       "class_id": "cls-1788002305410-h201",
@@ -296,6 +317,20 @@
     }
   ],
   "enrollments": [
+    {
+      "id": "enr-1788002495501-a2cf",
+      "studentId": "stu-step3-aditya-1788002495454",
+      "studentName": "Aditya Kumar",
+      "studentEmail": "aditya.step3.1788002495454@chem.edu",
+      "classId": "cls-1788002495489-bmsk",
+      "className": "B.Tech CSE - Inorganic Chemistry",
+      "sectionId": "sec-cls-1788002495489-bmsk-a",
+      "sectionName": "Section A",
+      "teacherId": "teacher-step3-alok-1788002495454",
+      "teacherName": "AD",
+      "joinedAt": "2026-08-29T11:21:35.501Z",
+      "status": "active"
+    },
     {
       "id": "enr-1788002305426-u8fd",
       "studentId": "stu-step2-rohit-1788002305383",
@@ -508,6 +543,129 @@
     }
   ],
   "exams": [
+    {
+      "id": "exam-1788002495506-plln",
+      "title": "Physical & Organic Chemistry Assessment",
+      "topic": "Reaction Kinetics & Thermodynamics",
+      "courseCode": "CSE-CHEM-301",
+      "courseName": "CSE-CHEM-301 — B.Tech CSE - Inorganic Chemistry",
+      "teacherId": "teacher-step3-alok-1788002495454",
+      "teacherName": "AD",
+      "classId": "cls-1788002495489-bmsk",
+      "className": "B.Tech CSE - Inorganic Chemistry",
+      "sectionId": "sec-cls-1788002495489-bmsk-a",
+      "sectionName": "Section A",
+      "durationMinutes": 60,
+      "instructions": "Standard examination rules apply. Complete all questions before the timer expires.",
+      "totalQuestions": 5,
+      "totalMarks": 10,
+      "passingMarks": 40,
+      "status": "published",
+      "questions": [
+        {
+          "id": "q-1788002495511-xv7c",
+          "text": "Which of the following represents the Arrhenius equation for reaction rate constant?",
+          "type": "mcq",
+          "options": [
+            {
+              "id": "opt-1",
+              "text": "k = A * e^(-Ea / RT)",
+              "isCorrect": true
+            },
+            {
+              "id": "opt-2",
+              "text": "k = A * e^(Ea / RT)",
+              "isCorrect": false
+            }
+          ],
+          "marks": 2,
+          "negativeMarks": 0,
+          "created_at": "2026-08-29T11:21:35.511Z"
+        },
+        {
+          "id": "q-1788002495514-qjro",
+          "text": "What is the pH of a 0.01 M HCl solution at 25°C?",
+          "type": "mcq",
+          "options": [
+            {
+              "id": "opt-1",
+              "text": "2.0",
+              "isCorrect": true
+            },
+            {
+              "id": "opt-2",
+              "text": "7.0",
+              "isCorrect": false
+            }
+          ],
+          "marks": 2,
+          "negativeMarks": 0,
+          "created_at": "2026-08-29T11:21:35.514Z"
+        },
+        {
+          "id": "q-1788002495518-6jvp",
+          "text": "Which element has the highest first ionization enthalpy in period 2?",
+          "type": "mcq",
+          "options": [
+            {
+              "id": "opt-1",
+              "text": "Neon (Ne)",
+              "isCorrect": true
+            },
+            {
+              "id": "opt-2",
+              "text": "Lithium (Li)",
+              "isCorrect": false
+            }
+          ],
+          "marks": 2,
+          "negativeMarks": 0,
+          "created_at": "2026-08-29T11:21:35.518Z"
+        },
+        {
+          "id": "q-1788002495521-xdpk",
+          "text": "In an electrochemical cell, oxidation takes place at the:",
+          "type": "mcq",
+          "options": [
+            {
+              "id": "opt-1",
+              "text": "Anode",
+              "isCorrect": true
+            },
+            {
+              "id": "opt-2",
+              "text": "Cathode",
+              "isCorrect": false
+            }
+          ],
+          "marks": 2,
+          "negativeMarks": 0,
+          "created_at": "2026-08-29T11:21:35.521Z"
+        },
+        {
+          "id": "q-1788002495524-1qfn",
+          "text": "What is the oxidation state of Chromium in K2Cr2O7?",
+          "type": "mcq",
+          "options": [
+            {
+              "id": "opt-1",
+              "text": "+6",
+              "isCorrect": true
+            },
+            {
+              "id": "opt-2",
+              "text": "+3",
+              "isCorrect": false
+            }
+          ],
+          "marks": 2,
+          "negativeMarks": 0,
+          "created_at": "2026-08-29T11:21:35.524Z"
+        }
+      ],
+      "created_at": "2026-08-29T11:21:35.506Z",
+      "updated_at": "2026-08-29T11:21:35.524Z"
+    },
     {
       "id": "exam-1788002305429-ys11",
       "title": "Chemistry Mid-Term Test",
@@ -1155,8 +1313,63 @@
       "updated_at": "2026-08-29T10:52:59.613Z"
     }
   ],
-  "attempts": [],
+  "attempts": [
+    {
+      "id": "att-1788002495532-ap6o",
+      "examId": "exam-1788002495506-plln",
+      "examTitle": "Physical & Organic Chemistry Assessment",
+      "courseCode": "CSE-CHEM-301",
+      "className": "B.Tech CSE - Inorganic Chemistry",
+      "studentId": "stu-step3-aditya-1788002495454",
+      "studentName": "Aditya Kumar",
+      "studentEmail": "aditya.step3.1788002495454@chem.edu",
+      "sectionId": "sec-cls-1788002495489-bmsk-a",
+      "status": "submitted",
+      "score": 8,
+      "totalMarks": 10,
+      "integrityScore": 95,
+      "answers": {
+        "q-1788002495511-xv7c": "opt-1",
+        "q-1788002495514-qjro": "opt-1",
+        "q-1788002495518-6jvp": "opt-1",
+        "q-1788002495521-xdpk": "opt-2",
+        "q-1788002495524-1qfn": "opt-1"
+      },
+      "proctoringEvents": [
+        {
+          "id": "evt-1788002495540-zm3s",
+          "attemptId": "att-1788002495532-ap6o",
+          "eventType": "LOOKING_AWAY",
+          "severity": "medium",
+          "description": "Candidate gaze shifted off-screen for 3.2 seconds",
+          "timestamp": "2026-08-29T11:21:35.541Z",
+          "metadata": {}
+        }
+      ],
+      "startedAt": "2026-08-29T11:21:35.533Z",
+      "submittedAt": "2026-08-29T11:21:35.546Z",
+      "created_at": "2026-08-29T11:21:35.533Z",
+      "updated_at": "2026-08-29T11:21:35.546Z"
+    }
+  ],
   "evidence": [
+    {
+      "id": "evi-1788002495543-82g8",
+      "examId": "exam-1788002495506-plln",
+      "attemptId": "att-1788002495532-ap6o",
+      "studentId": "stu-step3-aditya-1788002495454",
+      "evidenceType": "room_scan",
+      "filePath": "/evidence/room_scan_attempt_001.webm",
+      "signedUrl": "",
+      "durationSeconds": 12,
+      "coverageDegrees": 360,
+      "metadata": {
+        "quality": "1080p",
+        "angleVerified": true
+      },
+      "recordedAt": "2026-08-29T11:21:35.543Z",
+      "createdAt": "2026-08-29T11:21:35.543Z"
+    },
     {
       "id": "evi-1788001896864-8zc4",
       "attemptId": "att-user-1788001854966-auig-6856",
@@ -1170,6 +1383,39 @@
       "evidenceType": "proctoring_event",
       "metadata": {},
       "recordedAt": "2026-08-29T11:08:56.422Z"
+    },
+    {
+      "id": "evi-evt-1788002495541",
+      "examId": "exam-1788002495506-plln",
+      "attemptId": "att-1788002495532-ap6o",
+      "studentId": "stu-step3-aditya-1788002495454",
+      "evidenceType": "proctoring_event",
+      "metadata": {
+        "id": "evt-1788002495540-zm3s",
+        "attemptId": "att-1788002495532-ap6o",
+        "eventType": "LOOKING_AWAY",
+        "severity": "medium",
+        "description": "Candidate gaze shifted off-screen for 3.2 seconds",
+        "timestamp": "2026-08-29T11:21:35.541Z",
+        "metadata": {}
+      },
+      "recordedAt": "2026-08-29T11:21:35.541Z"
+    },
+    {
+      "id": "evi-sub-1788002495546",
+      "examId": "exam-1788002495506-plln",
+      "attemptId": "att-1788002495532-ap6o",
+      "studentId": "stu-step3-aditya-1788002495454",
+      "evidenceType": "exam_submission",
+      "metadata": {
+        "score": 8,
+        "totalMarks": 10,
+        "correctCount": 4,
+        "incorrectCount": 1,
+        "unattemptedCount": 0,
+        "integrityScore": 95
+      },
+      "recordedAt": "2026-08-29T11:21:35.546Z"
     }
   ]
 }

@@ -10,7 +10,7 @@ const DB_FILE = path.join(__dirname, 'database.json');
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
-// -- Database Helpers ---------------------------------------------------------
+// ── Database Helpers ─────────────────────────────────────────────────────────
 
 function readDB() {
   try {
@@ -43,13 +43,13 @@ function fuzzyNormalize(str) {
     .replace(/[IL]/g, '1');
 }
 
-// -- 1. Health Endpoint --------------------------------------------------------
+// ── 1. Health Endpoint ────────────────────────────────────────────────────────
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString(), server: 'Exam Fight Chemistry Backend' });
 });
 
-// -- 2. Auth Endpoints ---------------------------------------------------------
+// ── 2. Auth Endpoints ─────────────────────────────────────────────────────────
 
 app.post('/api/auth/login', (req, res) => {
   const { email } = req.body;
@@ -111,7 +111,7 @@ app.post('/api/auth/register', (req, res) => {
   res.json({ success: true, user: newUser });
 });
 
-// -- 3. Users Directory Endpoints ----------------------------------------------
+// ── 3. Users Directory Endpoints ──────────────────────────────────────────────
 
 app.get('/api/users', (req, res) => {
   const db = readDB();
@@ -139,7 +139,7 @@ app.delete('/api/users/:id', (req, res) => {
   res.json({ success: true });
 });
 
-// -- 4. Teacher Verification Codes ---------------------------------------------
+// ── 4. Teacher Verification Codes ─────────────────────────────────────────────
 
 app.get('/api/teacher-codes', (req, res) => {
   const db = readDB();
@@ -171,7 +171,7 @@ app.delete('/api/teacher-codes/:id', (req, res) => {
   res.json({ success: true });
 });
 
-// -- 5. Classes & Sections Endpoints -------------------------------------------
+// ── 5. Classes & Sections Endpoints ───────────────────────────────────────────
 
 app.get('/api/classes', (req, res) => {
   const { teacherId } = req.query;
@@ -299,7 +299,7 @@ app.delete('/api/sections/:id', (req, res) => {
   res.json({ success: true });
 });
 
-// -- 6. Student Join Class By Code (Enrollments) -------------------------------
+// ── 6. Student Join Class By Code (Enrollments) ───────────────────────────────
 
 app.post('/api/classes/join', (req, res) => {
   const { studentId, studentName, studentEmail, enrollmentCode } = req.body;
@@ -445,14 +445,13 @@ app.delete('/api/enrollments/:id', (req, res) => {
   res.json({ success: true });
 });
 
-// -- 7. Exams & Assignment Pipeline (STEP 2 CORE) ------------------------------
+// ── 7. Exams & Questions Pipeline (STEP 3 CORE) ───────────────────────────────
 
 app.get('/api/exams', (req, res) => {
   const { teacherId, studentId, studentEmail, sectionIds, status } = req.query;
   const db = readDB();
   let list = db.exams;
 
-  // 1. Teacher Query: View own exams with real enrolled student count
   if (teacherId) {
     list = list.filter(e => e.teacherId === teacherId || !e.teacherId);
     list = list.map(e => {
@@ -466,7 +465,6 @@ app.get('/api/exams', (req, res) => {
     return res.json({ success: true, exams: list });
   }
 
-  // 2. Student Query: Strictly resolve enrolled sections and return PUBLISHED exams
   if (studentId || studentEmail) {
     const studentEnrollments = db.enrollments.filter(e =>
       e.status === 'active' &&
@@ -481,7 +479,6 @@ app.get('/api/exams', (req, res) => {
       const isPublished = e.status === 'published' || e.status === 'active';
       if (!isPublished) return false;
 
-      // Check section-level eligibility
       if (e.sectionId) {
         return enrolledSecIds.includes(e.sectionId);
       }
@@ -508,12 +505,15 @@ app.get('/api/exams', (req, res) => {
 
 app.get('/api/exams/:id', (req, res) => {
   const { id } = req.params;
-  const { studentId, studentEmail } = req.query;
+  const { studentId, studentEmail, teacherId } = req.query;
   const db = readDB();
   const exam = db.exams.find(e => e.id === id);
   if (!exam) return res.status(404).json({ error: 'Exam not found.' });
 
-  // Security check: if student attempts direct access, verify enrollment and publish status
+  if (teacherId && exam.teacherId && exam.teacherId !== teacherId) {
+    return res.status(403).json({ error: 'Forbidden: You cannot access another faculty member\'s exam.' });
+  }
+
   if (studentId || studentEmail) {
     const isPublished = exam.status === 'published' || exam.status === 'active';
     if (!isPublished) {
@@ -526,7 +526,7 @@ app.get('/api/exams/:id', (req, res) => {
         ((studentId && e.studentId === studentId) ||
          (studentEmail && e.studentEmail && e.studentEmail.toLowerCase() === studentEmail.toLowerCase())) &&
         (exam.sectionId ? e.sectionId === exam.sectionId : e.classId === exam.classId)
-        );
+      );
 
       if (!hasEnrollment) {
         return res.status(403).json({
@@ -534,9 +534,133 @@ app.get('/api/exams/:id', (req, res) => {
         });
       }
     }
+
+    // Sanitize questions for student payload: remove correct answer keys!
+    const sanitizedQuestions = (exam.questions || []).map(q => {
+      const sanitizedOptions = (q.options || []).map(opt => ({
+        id: opt.id,
+        text: opt.text,
+      }));
+      return {
+        id: q.id,
+        text: q.text,
+        type: q.type || 'mcq',
+        marks: q.marks || 1,
+        negativeMarks: q.negativeMarks || 0,
+        options: sanitizedOptions,
+      };
+    });
+
+    return res.json({
+      success: true,
+      exam: {
+        ...exam,
+        questions: sanitizedQuestions,
+      }
+    });
   }
 
   res.json({ success: true, exam });
+});
+
+// Questions Endpoint (Get, Add, Edit, Delete)
+app.get('/api/exams/:id/questions', (req, res) => {
+  const { id } = req.params;
+  const { studentId, studentEmail } = req.query;
+  const db = readDB();
+  const exam = db.exams.find(e => e.id === id);
+  if (!exam) return res.status(404).json({ error: 'Exam not found.' });
+
+  const questions = exam.questions || [];
+
+  // If student requests, strip correct answer keys
+  if (studentId || studentEmail) {
+    const sanitized = questions.map(q => ({
+      id: q.id,
+      text: q.text,
+      type: q.type || 'mcq',
+      marks: q.marks || 1,
+      negativeMarks: q.negativeMarks || 0,
+      options: (q.options || []).map(opt => ({ id: opt.id, text: opt.text }))
+    }));
+    return res.json({ success: true, questions: sanitized });
+  }
+
+  res.json({ success: true, questions });
+});
+
+app.post('/api/exams/:id/questions', (req, res) => {
+  const { id } = req.params;
+  const { teacherId, question } = req.body;
+  const db = readDB();
+  const exam = db.exams.find(e => e.id === id);
+  if (!exam) return res.status(404).json({ error: 'Exam not found.' });
+
+  if (teacherId && exam.teacherId && exam.teacherId !== teacherId) {
+    return res.status(403).json({ error: 'Forbidden: You cannot modify questions in another instructor\'s exam.' });
+  }
+
+  if (!exam.questions) exam.questions = [];
+
+  const newQ = {
+    id: question.id || `q-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    text: question.text || 'Chemistry Question',
+    type: question.type || 'mcq',
+    options: question.options || [],
+    marks: Number(question.marks) || 1,
+    negativeMarks: Number(question.negativeMarks) || 0,
+    created_at: new Date().toISOString()
+  };
+
+  exam.questions.push(newQ);
+  exam.totalQuestions = exam.questions.length;
+  exam.totalMarks = exam.questions.reduce((sum, q) => sum + (q.marks || 1), 0);
+  exam.updated_at = new Date().toISOString();
+
+  writeDB(db);
+  res.json({ success: true, question: newQ, totalQuestions: exam.totalQuestions, totalMarks: exam.totalMarks });
+});
+
+app.put('/api/exams/:id/questions/:questionId', (req, res) => {
+  const { id, questionId } = req.params;
+  const { teacherId, question } = req.body;
+  const db = readDB();
+  const exam = db.exams.find(e => e.id === id);
+  if (!exam) return res.status(404).json({ error: 'Exam not found.' });
+
+  if (teacherId && exam.teacherId && exam.teacherId !== teacherId) {
+    return res.status(403).json({ error: 'Forbidden: You cannot edit questions in another instructor\'s exam.' });
+  }
+
+  const qIndex = (exam.questions || []).findIndex(q => q.id === questionId);
+  if (qIndex === -1) return res.status(404).json({ error: 'Question not found.' });
+
+  exam.questions[qIndex] = { ...exam.questions[qIndex], ...question, id: questionId };
+  exam.totalMarks = exam.questions.reduce((sum, q) => sum + (q.marks || 1), 0);
+  exam.updated_at = new Date().toISOString();
+
+  writeDB(db);
+  res.json({ success: true, question: exam.questions[qIndex] });
+});
+
+app.delete('/api/exams/:id/questions/:questionId', (req, res) => {
+  const { id, questionId } = req.params;
+  const { teacherId } = req.query;
+  const db = readDB();
+  const exam = db.exams.find(e => e.id === id);
+  if (!exam) return res.status(404).json({ error: 'Exam not found.' });
+
+  if (teacherId && exam.teacherId && exam.teacherId !== teacherId) {
+    return res.status(403).json({ error: 'Forbidden: You cannot delete questions from another instructor\'s exam.' });
+  }
+
+  exam.questions = (exam.questions || []).filter(q => q.id !== questionId);
+  exam.totalQuestions = exam.questions.length;
+  exam.totalMarks = exam.questions.reduce((sum, q) => sum + (q.marks || 1), 0);
+  exam.updated_at = new Date().toISOString();
+
+  writeDB(db);
+  res.json({ success: true, totalQuestions: exam.totalQuestions, totalMarks: exam.totalMarks });
 });
 
 app.post('/api/exams', (req, res) => {
@@ -549,7 +673,6 @@ app.post('/api/exams', (req, res) => {
 
   const teacherId = examData.teacherId || 'teacher-001';
 
-  // 1. Verify Teacher Ownership of Class & Section
   let className = examData.className || 'Class';
   let sectionName = examData.sectionName || 'Section A';
   let courseCode = examData.courseCode || 'CHEM101';
@@ -577,20 +700,21 @@ app.post('/api/exams', (req, res) => {
     sectionName = sec.name;
   }
 
-  // Teacher Profile Resolution
   const teacherUser = db.users.find(u => u.id === teacherId || u.role === 'teacher');
   const actualTeacherName = teacherUser?.full_name || examData.teacherName || 'Faculty Instructor';
 
-  // Standardize Status: 'published' | 'draft' | 'closed'
   let safeStatus = (examData.status || 'published').toLowerCase();
   if (safeStatus === 'active') safeStatus = 'published';
+
+  const questionsList = examData.questions || [];
+  const calculatedMarks = questionsList.reduce((sum, q) => sum + (Number(q.marks) || 1), 0) || Number(examData.totalMarks) || 100;
 
   const newExam = {
     id: examData.id || `exam-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
     title: examData.title.trim(),
     topic: examData.topic || 'General Chemistry',
     courseCode: courseCode.trim().toUpperCase(),
-    courseName: `${courseCode} � ${className}`,
+    courseName: `${courseCode} — ${className}`,
     teacherId,
     teacherName: actualTeacherName,
     classId: examData.classId || null,
@@ -599,11 +723,11 @@ app.post('/api/exams', (req, res) => {
     sectionName,
     durationMinutes: Number(examData.durationMinutes) || 60,
     instructions: examData.instructions || 'Standard examination rules apply. Complete all questions before the timer expires.',
-    totalQuestions: examData.questions ? examData.questions.length : 10,
-    totalMarks: Number(examData.totalMarks) || 100,
-    passingMarks: Number(examData.passingMarks) || 40,
+    totalQuestions: questionsList.length,
+    totalMarks: calculatedMarks,
+    passingMarks: Number(examData.passingMarks) || Math.ceil(calculatedMarks * 0.4),
     status: safeStatus,
-    questions: examData.questions || [],
+    questions: questionsList,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
@@ -649,12 +773,17 @@ app.delete('/api/exams/:id', (req, res) => {
   res.json({ success: true });
 });
 
-// -- 8. Attempts & Proctoring Evidence Endpoints -------------------------------
+// ── 8. Attempts & Real-time Answers (STEP 3 ATTEMPT LOGIC) ─────────────────────
 
 app.get('/api/attempts', (req, res) => {
-  const { studentId, examId } = req.query;
+  const { studentId, examId, teacherId } = req.query;
   const db = readDB();
   let list = db.attempts;
+
+  if (teacherId) {
+    const teacherExams = db.exams.filter(e => e.teacherId === teacherId).map(e => e.id);
+    list = list.filter(a => teacherExams.includes(a.examId));
+  }
   if (studentId) {
     list = list.filter(a => a.studentId === studentId);
   }
@@ -664,53 +793,253 @@ app.get('/api/attempts', (req, res) => {
   res.json({ success: true, attempts: list });
 });
 
-app.post('/api/attempts', (req, res) => {
-  const attemptData = req.body;
+app.get('/api/attempts/:id', (req, res) => {
+  const { id } = req.params;
+  const { studentId, teacherId } = req.query;
   const db = readDB();
+  const attempt = db.attempts.find(a => a.id === id);
+  if (!attempt) return res.status(404).json({ error: 'Exam attempt not found.' });
+
+  // Security: Only owner student or exam teacher can access
+  if (studentId && attempt.studentId !== studentId) {
+    return res.status(403).json({ error: 'Forbidden: You cannot access another student\'s examination attempt.' });
+  }
+
+  if (teacherId) {
+    const exam = db.exams.find(e => e.id === attempt.examId);
+    if (exam && exam.teacherId && exam.teacherId !== teacherId) {
+      return res.status(403).json({ error: 'Forbidden: You cannot access attempts from another instructor\'s exam.' });
+    }
+  }
+
+  res.json({ success: true, attempt });
+});
+
+app.post('/api/attempts', (req, res) => {
+  const { examId, studentId, studentName, studentEmail, sectionId } = req.body;
+  if (!examId || !studentId) return res.status(400).json({ error: 'examId and studentId are required.' });
+
+  const db = readDB();
+  const exam = db.exams.find(e => e.id === examId);
+  if (!exam) return res.status(404).json({ error: 'Exam not found.' });
+
+  const isPublished = exam.status === 'published' || exam.status === 'active';
+  if (!isPublished) return res.status(403).json({ error: 'This exam is currently unpublished.' });
+
+  // Verify enrollment
+  const hasEnrollment = db.enrollments.some(e =>
+    e.status === 'active' &&
+    (e.studentId === studentId || (studentEmail && e.studentEmail.toLowerCase() === studentEmail.toLowerCase())) &&
+    (exam.sectionId ? e.sectionId === exam.sectionId : e.classId === exam.classId)
+  );
+
+  if (!hasEnrollment) {
+    return res.status(403).json({ error: 'Access Denied: You are not enrolled in the class section for this exam.' });
+  }
+
+  // Check if existing in-progress attempt exists
+  let existingAttempt = db.attempts.find(a => a.examId === examId && a.studentId === studentId && a.status === 'in_progress');
+  if (existingAttempt) {
+    return res.json({ success: true, attempt: existingAttempt });
+  }
 
   const newAttempt = {
-    id: attemptData.id || `att-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-    examId: attemptData.examId,
-    examTitle: attemptData.examTitle || 'Chemistry Examination',
-    courseCode: attemptData.courseCode || 'CHEM101',
-    studentId: attemptData.studentId,
-    studentName: attemptData.studentName || 'Candidate',
-    sectionId: attemptData.sectionId,
-    status: attemptData.status || 'in_progress',
-    score: attemptData.score || 0,
-    totalMarks: attemptData.totalMarks || 100,
-    integrityScore: attemptData.integrityScore || 100,
-    answers: attemptData.answers || {},
-    proctoringEvents: attemptData.proctoringEvents || [],
-    startedAt: attemptData.startedAt || new Date().toISOString(),
-    submittedAt: attemptData.submittedAt || null,
+    id: `att-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    examId,
+    examTitle: exam.title,
+    courseCode: exam.courseCode,
+    className: exam.className,
+    studentId,
+    studentName: studentName || 'Student Candidate',
+    studentEmail: studentEmail || '',
+    sectionId: sectionId || exam.sectionId,
+    status: 'in_progress',
+    score: null,
+    totalMarks: exam.totalMarks || 100,
+    integrityScore: 100,
+    answers: {},
+    proctoringEvents: [],
+    startedAt: new Date().toISOString(),
+    submittedAt: null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   };
 
-  const existingIdx = db.attempts.findIndex(a => a.id === newAttempt.id);
-  if (existingIdx >= 0) {
-    db.attempts[existingIdx] = newAttempt;
-  } else {
-    db.attempts.unshift(newAttempt);
-  }
-
+  db.attempts.unshift(newAttempt);
   writeDB(db);
   res.json({ success: true, attempt: newAttempt });
 });
 
-app.post('/api/evidence', (req, res) => {
-  const evidenceData = req.body;
+app.put('/api/attempts/:id/answers', (req, res) => {
+  const { id } = req.params;
+  const { studentId, answers } = req.body;
   const db = readDB();
+  const attempt = db.attempts.find(a => a.id === id);
+  if (!attempt) return res.status(404).json({ error: 'Exam attempt not found.' });
+
+  if (studentId && attempt.studentId !== studentId) {
+    return res.status(403).json({ error: 'Forbidden: You cannot modify another student\'s answers.' });
+  }
+
+  if (attempt.status === 'submitted') {
+    return res.status(400).json({ error: 'Cannot modify answers after final exam submission.' });
+  }
+
+  attempt.answers = { ...attempt.answers, ...(answers || {}) };
+  attempt.updated_at = new Date().toISOString();
+  writeDB(db);
+  res.json({ success: true, answers: attempt.answers });
+});
+
+app.post('/api/attempts/:id/events', (req, res) => {
+  const { id } = req.params;
+  const { eventType, severity, description, timestamp, metadata } = req.body;
+  const db = readDB();
+  const attempt = db.attempts.find(a => a.id === id);
+  if (!attempt) return res.status(404).json({ error: 'Exam attempt not found.' });
+
+  const newEvent = {
+    id: `evt-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    attemptId: id,
+    eventType: eventType || 'PROCTORING_FLAG',
+    severity: severity || 'medium',
+    description: description || 'Proctoring alert triggered',
+    timestamp: timestamp || new Date().toISOString(),
+    metadata: metadata || {}
+  };
+
+  if (!attempt.proctoringEvents) attempt.proctoringEvents = [];
+  attempt.proctoringEvents.push(newEvent);
+
+  // Recalculate integrity score
+  const penalty = severity === 'high' ? 10 : severity === 'medium' ? 5 : 2;
+  attempt.integrityScore = Math.max(0, (attempt.integrityScore || 100) - penalty);
+  attempt.updated_at = new Date().toISOString();
+
+  // Also save in evidence store
+  const newEvidence = {
+    id: `evi-evt-${Date.now()}`,
+    examId: attempt.examId,
+    attemptId: id,
+    studentId: attempt.studentId,
+    evidenceType: 'proctoring_event',
+    metadata: { ...newEvent },
+    recordedAt: newEvent.timestamp
+  };
+  db.evidence.push(newEvidence);
+
+  writeDB(db);
+  res.json({ success: true, event: newEvent, integrityScore: attempt.integrityScore });
+});
+
+app.post('/api/attempts/:id/submit', (req, res) => {
+  const { id } = req.params;
+  const { studentId, answers } = req.body;
+  const db = readDB();
+  const attempt = db.attempts.find(a => a.id === id);
+  if (!attempt) return res.status(404).json({ error: 'Exam attempt not found.' });
+
+  if (studentId && attempt.studentId !== studentId) {
+    return res.status(403).json({ error: 'Forbidden: You cannot submit another student\'s attempt.' });
+  }
+
+  if (answers) {
+    attempt.answers = { ...attempt.answers, ...answers };
+  }
+
+  // Automatic Grading against exam questions
+  const exam = db.exams.find(e => e.id === attempt.examId);
+  let totalScore = 0;
+  let maxScore = exam ? exam.totalMarks : 100;
+  let correctCount = 0;
+  let incorrectCount = 0;
+  let unattemptedCount = 0;
+
+  if (exam && Array.isArray(exam.questions)) {
+    maxScore = exam.questions.reduce((sum, q) => sum + (Number(q.marks) || 1), 0);
+    exam.questions.forEach(q => {
+      const studentAns = attempt.answers[q.id];
+      const correctOption = (q.options || []).find(opt => opt.isCorrect);
+
+      if (!studentAns || (typeof studentAns === 'object' && (!studentAns.selectedOptionIds || studentAns.selectedOptionIds.length === 0))) {
+        unattemptedCount++;
+      } else {
+        const selectedVal = typeof studentAns === 'string'
+          ? studentAns
+          : studentAns.selectedOptionIds ? studentAns.selectedOptionIds[0] : studentAns.value;
+
+        if (correctOption && (selectedVal === correctOption.id || selectedVal === correctOption.text)) {
+          totalScore += Number(q.marks) || 1;
+          correctCount++;
+        } else {
+          totalScore -= Number(q.negativeMarks) || 0;
+          incorrectCount++;
+        }
+      }
+    });
+  }
+
+  attempt.status = 'submitted';
+  attempt.submittedAt = new Date().toISOString();
+  attempt.score = Math.max(0, totalScore);
+  attempt.totalMarks = maxScore;
+  attempt.updated_at = new Date().toISOString();
+
+  // Create submission evidence
+  db.evidence.push({
+    id: `evi-sub-${Date.now()}`,
+    examId: attempt.examId,
+    attemptId: id,
+    studentId: attempt.studentId,
+    evidenceType: 'exam_submission',
+    metadata: {
+      score: attempt.score,
+      totalMarks: attempt.totalMarks,
+      correctCount,
+      incorrectCount,
+      unattemptedCount,
+      integrityScore: attempt.integrityScore
+    },
+    recordedAt: attempt.submittedAt
+  });
+
+  writeDB(db);
+  res.json({
+    success: true,
+    attempt,
+    grading: {
+      score: attempt.score,
+      totalMarks: maxScore,
+      correctCount,
+      incorrectCount,
+      unattemptedCount,
+      percentage: Math.round((attempt.score / maxScore) * 100)
+    }
+  });
+});
+
+// ── 9. Evidence Vault & Evidence Review (STEP 3 EVIDENCE LOGIC) ─────────────────
+
+app.post('/api/attempts/:id/evidence', (req, res) => {
+  const { id } = req.params;
+  const { studentId, evidenceType, filePath, signedUrl, durationSeconds, coverageDegrees, metadata } = req.body;
+  const db = readDB();
+  const attempt = db.attempts.find(a => a.id === id);
+  if (!attempt) return res.status(404).json({ error: 'Exam attempt not found.' });
 
   const newEvidence = {
     id: `evi-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-    examId: evidenceData.examId,
-    attemptId: evidenceData.attemptId,
-    studentId: evidenceData.studentId,
-    evidenceType: evidenceData.evidenceType || 'proctoring_event',
-    metadata: evidenceData.metadata || {},
-    recordedAt: new Date().toISOString()
+    examId: attempt.examId,
+    attemptId: id,
+    studentId: studentId || attempt.studentId,
+    evidenceType: evidenceType || 'room_scan',
+    filePath: filePath || '',
+    signedUrl: signedUrl || '',
+    durationSeconds: durationSeconds || 0,
+    coverageDegrees: coverageDegrees || 300,
+    metadata: metadata || {},
+    recordedAt: new Date().toISOString(),
+    createdAt: new Date().toISOString()
   };
 
   db.evidence.unshift(newEvidence);
@@ -718,16 +1047,82 @@ app.post('/api/evidence', (req, res) => {
   res.json({ success: true, evidence: newEvidence });
 });
 
-app.get('/api/evidence/:attemptId', (req, res) => {
-  const { attemptId } = req.params;
+app.get('/api/attempts/:id/evidence', (req, res) => {
+  const { id } = req.params;
+  const { studentId, teacherId } = req.query;
   const db = readDB();
-  const list = db.evidence.filter(e => e.attemptId === attemptId);
-  res.json({ success: true, evidence: list });
+  const attempt = db.attempts.find(a => a.id === id);
+  if (!attempt) return res.status(404).json({ error: 'Attempt not found.' });
+
+  if (studentId && attempt.studentId !== studentId) {
+    return res.status(403).json({ error: 'Forbidden: You cannot view evidence from another student\'s attempt.' });
+  }
+
+  if (teacherId) {
+    const exam = db.exams.find(e => e.id === attempt.examId);
+    if (exam && exam.teacherId && exam.teacherId !== teacherId) {
+      return res.status(403).json({ error: 'Forbidden: You cannot view evidence from another instructor\'s exam.' });
+    }
+  }
+
+  const evidenceList = db.evidence.filter(e => e.attemptId === id);
+  res.json({ success: true, attempt, evidenceList, proctoringEvents: attempt.proctoringEvents || [] });
 });
 
-// -- Start Express Server ------------------------------------------------------
+// Teacher Comprehensive Evidence Review Endpoint
+app.get('/api/evidence/review', (req, res) => {
+  const { teacherId, examId, studentId, attemptId } = req.query;
+  if (!teacherId) return res.status(400).json({ error: 'teacherId is required for evidence review.' });
+
+  const db = readDB();
+
+  // 1. Get exams belonging to this teacher
+  const teacherExams = db.exams.filter(e => e.teacherId === teacherId);
+  const examIds = teacherExams.map(e => e.id);
+
+  // 2. Get attempts belonging to teacher's exams
+  let attempts = db.attempts.filter(a => examIds.includes(a.examId));
+
+  if (examId) {
+    attempts = attempts.filter(a => a.examId === examId);
+  }
+  if (studentId) {
+    attempts = attempts.filter(a => a.studentId === studentId);
+  }
+
+  let selectedAttempt = null;
+  if (attemptId) {
+    selectedAttempt = attempts.find(a => a.id === attemptId) || null;
+  } else if (attempts.length > 0) {
+    selectedAttempt = attempts[0];
+  }
+
+  let evidenceList = [];
+  let proctoringTimeline = [];
+
+  if (selectedAttempt) {
+    evidenceList = db.evidence.filter(e => e.attemptId === selectedAttempt.id);
+    proctoringTimeline = (selectedAttempt.proctoringEvents || []).map(evt => ({
+      time: new Date(evt.timestamp).toLocaleTimeString(),
+      type: evt.eventType,
+      severity: evt.severity,
+      description: evt.description,
+      timestamp: evt.timestamp
+    }));
+  }
+
+  res.json({
+    success: true,
+    exams: teacherExams,
+    attempts,
+    selectedAttempt,
+    evidenceList,
+    proctoringTimeline
+  });
+});
+
+// ── Start Express Server ──────────────────────────────────────────────────────
 
 app.listen(PORT, () => {
   console.log(`Exam Fight Chemistry REST Backend running on http://localhost:${PORT}`);
 });
-
