@@ -71,12 +71,12 @@ export const ContactSupportModal: React.FC<ContactSupportModalProps> = ({ isOpen
     setScreenshotPreview(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!subject.trim() || !description.trim()) return;
 
     setIsSubmitting(true);
-    const complaint = submitComplaint({
+    const complaint = await submitComplaint({
       userId: userId || `id-${Date.now()}`,
       userName: name || 'Anonymous',
       userEmail: email || 'user@chem.edu',

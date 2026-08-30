@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   getStoredComplaints,
+  fetchComplaintsFromDB,
   updateComplaintStatus,
   deleteComplaint,
   SupportComplaint,
@@ -30,7 +31,8 @@ export const AdminComplaintsPage: React.FC = () => {
   const [resolutionNotes, setResolutionNotes] = useState('');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const loadComplaints = () => {
+  const loadComplaints = async () => {
+    await fetchComplaintsFromDB();
     setComplaints(getStoredComplaints());
   };
 

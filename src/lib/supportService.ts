@@ -1,5 +1,5 @@
 // src/lib/supportService.ts
-// Persistent complaint and support ticket service for students, teachers, and admins
+// Real backend & REST API Service for support tickets and student/faculty complaints
 
 export interface SupportComplaint {
   id: string;
@@ -33,7 +33,7 @@ export const getStoredComplaints = (): SupportComplaint[] => {
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
   } catch (err) {
-    console.error('Error loading complaints:', err);
+    console.error('Error loading complaints from localStorage:', err);
     return [];
   }
 };
@@ -42,11 +42,27 @@ export const saveStoredComplaints = (complaints: SupportComplaint[]): void => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(complaints));
   } catch (err) {
-    console.error('Error saving complaints:', err);
+    console.error('Error saving complaints to localStorage:', err);
   }
 };
 
-export const submitComplaint = (data: {
+export const fetchComplaintsFromDB = async (): Promise<SupportComplaint[]> => {
+  try {
+    const res = await fetch('/api/complaints');
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.complaints)) {
+        saveStoredComplaints(data.complaints);
+        return data.complaints;
+      }
+    }
+  } catch (err) {
+    console.warn('Backend fetchComplaintsFromDB error:', err);
+  }
+  return getStoredComplaints();
+};
+
+export const submitComplaint = async (data: {
   userId: string;
   userName: string;
   userEmail: string;
@@ -55,7 +71,26 @@ export const submitComplaint = (data: {
   subject: string;
   description: string;
   screenshotUrl?: string | null;
-}): SupportComplaint => {
+}): Promise<SupportComplaint> => {
+  try {
+    const res = await fetch('/api/complaints', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (res.ok) {
+      const respData = await res.json();
+      if (respData.complaint) {
+        const current = getStoredComplaints();
+        const updated = [respData.complaint, ...current.filter(c => c.id !== respData.complaint.id)];
+        saveStoredComplaints(updated);
+        return respData.complaint;
+      }
+    }
+  } catch (err) {
+    console.warn('Backend submitComplaint error:', err);
+  }
+
   const complaints = getStoredComplaints();
   const ticketSuffix = Math.floor(1000 + Math.random() * 9000);
   const ticketNumber = `TKT-2026-${ticketSuffix}`;
@@ -80,11 +115,30 @@ export const submitComplaint = (data: {
   return newComplaint;
 };
 
-export const updateComplaintStatus = (
+export const updateComplaintStatus = async (
   complaintId: string,
   status: 'Open' | 'In Progress' | 'Resolved',
   resolutionNotes?: string
-): SupportComplaint | null => {
+): Promise<SupportComplaint | null> => {
+  try {
+    const res = await fetch(`/api/complaints/${encodeURIComponent(complaintId)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status, resolutionNotes }),
+    });
+    if (res.ok) {
+      const respData = await res.json();
+      if (respData.complaint) {
+        const current = getStoredComplaints();
+        const updated = current.map(c => c.id === complaintId ? respData.complaint : c);
+        saveStoredComplaints(updated);
+        return respData.complaint;
+      }
+    }
+  } catch (err) {
+    console.warn('Backend updateComplaintStatus error:', err);
+  }
+
   const complaints = getStoredComplaints();
   const index = complaints.findIndex((c) => c.id === complaintId);
   if (index === -1) return null;
@@ -101,7 +155,15 @@ export const updateComplaintStatus = (
   return updated;
 };
 
-export const deleteComplaint = (complaintId: string): boolean => {
+export const deleteComplaint = async (complaintId: string): Promise<boolean> => {
+  try {
+    await fetch(`/api/complaints/${encodeURIComponent(complaintId)}`, {
+      method: 'DELETE',
+    });
+  } catch (err) {
+    console.warn('Backend deleteComplaint error:', err);
+  }
+
   const complaints = getStoredComplaints();
   const filtered = complaints.filter((c) => c.id !== complaintId);
   if (filtered.length === complaints.length) return false;

@@ -15,7 +15,7 @@ app.use(express.json({ limit: '50mb' }));
 function readDB() {
   try {
     if (!fs.existsSync(DB_FILE)) {
-      const initial = { users: [], teacherCodes: [], classes: [], sections: [], enrollments: [], exams: [], attempts: [], evidence: [], requests: [], results: [] };
+      const initial = { users: [], teacherCodes: [], classes: [], sections: [], enrollments: [], exams: [], attempts: [], evidence: [], requests: [], results: [], complaints: [] };
       fs.writeFileSync(DB_FILE, JSON.stringify(initial, null, 2), 'utf8');
       return initial;
     }
@@ -23,10 +23,11 @@ function readDB() {
     const parsed = JSON.parse(raw);
     if (!parsed.requests) parsed.requests = [];
     if (!parsed.results) parsed.results = [];
+    if (!parsed.complaints) parsed.complaints = [];
     return parsed;
   } catch (err) {
     console.error('DB read error:', err);
-    return { users: [], teacherCodes: [], classes: [], sections: [], enrollments: [], exams: [], attempts: [], evidence: [], requests: [], results: [] };
+    return { users: [], teacherCodes: [], classes: [], sections: [], enrollments: [], exams: [], attempts: [], evidence: [], requests: [], results: [], complaints: [] };
   }
 }
 
@@ -144,19 +145,20 @@ app.delete('/api/users/:id', (req, res) => {
 
 // ── 4. Teacher Verification Codes ─────────────────────────────────────────────
 
-app.get('/api/teacher-codes', (req, res) => {
+app.get(['/api/teacher-codes', '/api/teachers/codes'], (req, res) => {
   const db = readDB();
   res.json({ success: true, codes: db.teacherCodes });
 });
 
-app.post('/api/teacher-codes/generate', (req, res) => {
-  const { facultyEmail } = req.body;
+const generateTeacherCodeHandler = (req, res) => {
+  const { facultyEmail, email } = req.body;
+  const targetEmail = facultyEmail || email || null;
   const db = readDB();
   const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
   const newCode = {
     id: `code-${Date.now()}`,
     code: `CHEM-FACULTY-2026-${randomSuffix}`,
-    created_for: facultyEmail || null,
+    created_for: targetEmail,
     is_used: false,
     created_at: new Date().toISOString(),
     expires_at: null
@@ -164,9 +166,11 @@ app.post('/api/teacher-codes/generate', (req, res) => {
   db.teacherCodes.unshift(newCode);
   writeDB(db);
   res.json({ success: true, code: newCode });
-});
+};
 
-app.delete('/api/teacher-codes/:id', (req, res) => {
+app.post(['/api/teacher-codes', '/api/teacher-codes/generate', '/api/teachers/codes'], generateTeacherCodeHandler);
+
+app.delete(['/api/teacher-codes/:id', '/api/teachers/codes/:id'], (req, res) => {
   const { id } = req.params;
   const db = readDB();
   db.teacherCodes = db.teacherCodes.filter(c => c.id !== id);
@@ -409,6 +413,8 @@ app.post('/api/classes/join', (req, res) => {
   res.json({
     success: true,
     enrollment: newEnrollment,
+    class: cls,
+    section: section,
     className: cls.name,
     sectionName: section.name,
     teacherName: actualTeacherName,
@@ -1409,6 +1415,85 @@ app.get('/api/results/:id', (req, res) => {
   }
 
   res.json({ success: true, result });
+});
+
+// ── 12. Support Complaints & Feedback Tickets ─────────────────────────────────
+
+app.get('/api/complaints', (req, res) => {
+  const { userId, status } = req.query;
+  const db = readDB();
+  let list = db.complaints || [];
+
+  if (userId) {
+    list = list.filter(c => c.userId === userId);
+  }
+  if (status && status !== 'all') {
+    list = list.filter(c => c.status === status);
+  }
+
+  res.json({ success: true, complaints: list });
+});
+
+app.post('/api/complaints', (req, res) => {
+  const { userId, userName, userEmail, userRole, category, subject, description, screenshotUrl } = req.body;
+  if (!subject || !description) {
+    return res.status(400).json({ error: 'Subject and description are required.' });
+  }
+
+  const db = readDB();
+  const ticketSuffix = Math.floor(1000 + Math.random() * 9000);
+  const newComplaint = {
+    id: `comp-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    ticketNumber: `TICK-${ticketSuffix}`,
+    userId: userId || 'unknown-user',
+    userName: userName || 'Candidate',
+    userEmail: userEmail || '',
+    userRole: userRole || 'student',
+    category: category || 'General Feedback',
+    subject: subject.trim(),
+    description: description.trim(),
+    screenshotUrl: screenshotUrl || null,
+    status: 'Open',
+    resolutionNotes: null,
+    resolvedAt: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  if (!db.complaints) db.complaints = [];
+  db.complaints.unshift(newComplaint);
+  writeDB(db);
+
+  res.json({ success: true, complaint: newComplaint });
+});
+
+app.put('/api/complaints/:id', (req, res) => {
+  const { id } = req.params;
+  const { status, resolutionNotes } = req.body;
+  const db = readDB();
+  const complaint = (db.complaints || []).find(c => c.id === id);
+  if (!complaint) return res.status(404).json({ error: 'Complaint not found.' });
+
+  if (status) complaint.status = status;
+  if (resolutionNotes !== undefined) complaint.resolutionNotes = resolutionNotes;
+  if (status === 'Resolved') {
+    complaint.resolvedAt = new Date().toISOString();
+  }
+  complaint.updatedAt = new Date().toISOString();
+
+  writeDB(db);
+  res.json({ success: true, complaint });
+});
+
+app.delete('/api/complaints/:id', (req, res) => {
+  const { id } = req.params;
+  const db = readDB();
+  const index = (db.complaints || []).findIndex(c => c.id === id);
+  if (index === -1) return res.status(404).json({ error: 'Complaint not found.' });
+
+  db.complaints.splice(index, 1);
+  writeDB(db);
+  res.json({ success: true, message: 'Complaint deleted.' });
 });
 
 // ── Start Express Server ──────────────────────────────────────────────────────

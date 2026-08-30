@@ -23,9 +23,59 @@
       "role": "student",
       "created_at": "2026-08-29T11:10:54.966Z",
       "updated_at": "2026-08-29T11:10:54.966Z"
+    },
+    {
+      "id": "user-1788112197077-i33g",
+      "email": "prof.verma.1788112197003@chem.edu",
+      "full_name": "Prof. Alok Verma",
+      "role": "teacher",
+      "created_at": "2026-08-30T17:49:57.077Z",
+      "updated_at": "2026-08-30T17:49:57.078Z"
+    },
+    {
+      "id": "user-1788112197093-jtof",
+      "email": "aditya.1788112197003@chem.edu",
+      "full_name": "Aditya Kumar",
+      "role": "student",
+      "created_at": "2026-08-30T17:49:57.093Z",
+      "updated_at": "2026-08-30T17:49:57.093Z"
+    },
+    {
+      "id": "user-1788112233851-k505",
+      "email": "prof.verma.1788112233781@chem.edu",
+      "full_name": "Prof. Alok Verma",
+      "role": "teacher",
+      "created_at": "2026-08-30T17:50:33.851Z",
+      "updated_at": "2026-08-30T17:50:33.851Z"
+    },
+    {
+      "id": "user-1788112233863-xqzj",
+      "email": "aditya.1788112233781@chem.edu",
+      "full_name": "Aditya Kumar",
+      "role": "student",
+      "created_at": "2026-08-30T17:50:33.863Z",
+      "updated_at": "2026-08-30T17:50:33.863Z"
     }
   ],
   "teacherCodes": [
+    {
+      "id": "code-1788112233837",
+      "code": "CHEM-FACULTY-2026-MBFU",
+      "created_for": "prof.verma.1788112233781@chem.edu",
+      "is_used": true,
+      "created_at": "2026-08-30T17:50:33.837Z",
+      "expires_at": null,
+      "used_by": "prof.verma.1788112233781@chem.edu"
+    },
+    {
+      "id": "code-1788112197063",
+      "code": "CHEM-FACULTY-2026-PANP",
+      "created_for": "prof.verma.1788112197003@chem.edu",
+      "is_used": true,
+      "created_at": "2026-08-30T17:49:57.063Z",
+      "expires_at": null,
+      "used_by": "prof.verma.1788112197003@chem.edu"
+    },
     {
       "id": "code-1788001632936",
       "code": "CHEM-FACULTY-2026-TS9S",
@@ -46,6 +96,30 @@
     }
   ],
   "classes": [
+    {
+      "id": "cls-1788112233857-uhhh",
+      "name": "B.Tech CSE - Advanced Chemistry",
+      "code": "CSE-CHEM-601",
+      "teacher_id": "user-1788112233851-k505",
+      "teacher_name": "Prof. Alok Verma",
+      "academic_year": "2026-27",
+      "subject": "Chemistry",
+      "description": "",
+      "created_at": "2026-08-30T17:50:33.857Z",
+      "updated_at": "2026-08-30T17:50:33.857Z"
+    },
+    {
+      "id": "cls-1788112197085-cjk9",
+      "name": "B.Tech CSE - Advanced Chemistry",
+      "code": "CSE-CHEM-601",
+      "teacher_id": "user-1788112197077-i33g",
+      "teacher_name": "Prof. Alok Verma",
+      "academic_year": "2026-27",
+      "subject": "Chemistry",
+      "description": "",
+      "created_at": "2026-08-30T17:49:57.085Z",
+      "updated_at": "2026-08-30T17:49:57.085Z"
+    },
     {
       "id": "cls-1788004611626-dboy",
       "name": "B.Tech CSE - Analytical Chemistry",
@@ -253,6 +327,24 @@
   ],
   "sections": [
     {
+      "id": "sec-cls-1788112233857-uhhh-a",
+      "class_id": "cls-1788112233857-uhhh",
+      "className": "B.Tech CSE - Advanced Chemistry",
+      "name": "Section A",
+      "enrollment_code": "CSE--A0FVS",
+      "created_at": "2026-08-30T17:50:33.857Z",
+      "updated_at": "2026-08-30T17:50:33.857Z"
+    },
+    {
+      "id": "sec-cls-1788112197085-cjk9-a",
+      "class_id": "cls-1788112197085-cjk9",
+      "className": "B.Tech CSE - Advanced Chemistry",
+      "name": "Section A",
+      "enrollment_code": "CSE--A3DHA",
+      "created_at": "2026-08-30T17:49:57.085Z",
+      "updated_at": "2026-08-30T17:49:57.085Z"
+    },
+    {
       "id": "sec-cls-1788004611626-dboy-a",
       "class_id": "cls-1788004611626-dboy",
       "className": "B.Tech CSE - Analytical Chemistry",
@@ -452,6 +544,34 @@
     }
   ],
   "enrollments": [
+    {
+      "id": "enr-1788112233871-hhyd",
+      "studentId": "user-1788112233863-xqzj",
+      "studentName": "Aditya Kumar",
+      "studentEmail": "aditya.1788112233781@chem.edu",
+      "classId": "cls-1788112233857-uhhh",
+      "className": "B.Tech CSE - Advanced Chemistry",
+      "sectionId": "sec-cls-1788112233857-uhhh-a",
+      "sectionName": "Section A",
+      "teacherId": "user-1788112233851-k505",
+      "teacherName": "Prof. Alok Verma",
+      "joinedAt": "2026-08-30T17:50:33.871Z",
+      "status": "active"
+    },
+    {
+      "id": "enr-1788112197101-r23g",
+      "studentId": "user-1788112197093-jtof",
+      "studentName": "Aditya Kumar",
+      "studentEmail": "aditya.1788112197003@chem.edu",
+      "classId": "cls-1788112197085-cjk9",
+      "className": "B.Tech CSE - Advanced Chemistry",
+      "sectionId": "sec-cls-1788112197085-cjk9-a",
+      "sectionName": "Section A",
+      "teacherId": "user-1788112197077-i33g",
+      "teacherName": "Prof. Alok Verma",
+      "joinedAt": "2026-08-30T17:49:57.101Z",
+      "status": "active"
+    },
     {
       "id": "enr-1788004611646-jgc5",
       "studentId": "stu-s5-priya-1788004611592",
@@ -832,6 +952,75 @@
     }
   ],
   "exams": [
+    {
+      "id": "exam-1788112233879-al7y",
+      "title": "Quantum & Physical Chemistry Quiz",
+      "topic": "General Chemistry",
+      "courseCode": "CSE-CHEM-601",
+      "courseName": "CSE-CHEM-601 — B.Tech CSE - Advanced Chemistry",
+      "teacherId": "user-1788112233851-k505",
+      "teacherName": "Prof. Alok Verma",
+      "classId": "cls-1788112233857-uhhh",
+      "className": "B.Tech CSE - Advanced Chemistry",
+      "sectionId": "sec-cls-1788112233857-uhhh-a",
+      "sectionName": "Section A",
+      "durationMinutes": 30,
+      "instructions": "Standard examination rules apply. Complete all questions before the timer expires.",
+      "totalQuestions": 2,
+      "totalMarks": 2,
+      "passingMarks": 1,
+      "status": "published",
+      "questions": [
+        {
+          "id": "q1-planck",
+          "text": "What is the energy of a photon with frequency ν?",
+          "type": "mcq",
+          "marks": 1,
+          "options": [
+            {
+              "id": "opt1-a",
+              "text": "E = hν",
+              "isCorrect": true
+            },
+            {
+              "id": "opt1-b",
+              "text": "E = h/ν",
+              "isCorrect": false
+            },
+            {
+              "id": "opt1-c",
+              "text": "E = mc",
+              "isCorrect": false
+            }
+          ]
+        },
+        {
+          "id": "q2-bohr",
+          "text": "Bohr radius for hydrogen ground state is approximately:",
+          "type": "mcq",
+          "marks": 1,
+          "options": [
+            {
+              "id": "opt2-a",
+              "text": "0.529 Å",
+              "isCorrect": true
+            },
+            {
+              "id": "opt2-b",
+              "text": "1.058 Å",
+              "isCorrect": false
+            },
+            {
+              "id": "opt2-c",
+              "text": "0.264 Å",
+              "isCorrect": false
+            }
+          ]
+        }
+      ],
+      "created_at": "2026-08-30T17:50:33.879Z",
+      "updated_at": "2026-08-30T17:50:33.879Z"
+    },
     {
       "id": "exam-1788004611650-s5y1",
       "title": "Thermodynamics & Reaction Kinetics",
@@ -1877,6 +2066,62 @@
   ],
   "attempts": [
     {
+      "id": "att-1788112233886-el0s",
+      "examId": "exam-1788112233879-al7y",
+      "examTitle": "Quantum & Physical Chemistry Quiz",
+      "courseCode": "CSE-CHEM-601",
+      "className": "B.Tech CSE - Advanced Chemistry",
+      "studentId": "user-1788112233863-xqzj",
+      "studentName": "Aditya Kumar",
+      "studentEmail": "aditya.1788112233781@chem.edu",
+      "sectionId": "sec-cls-1788112233857-uhhh-a",
+      "status": "submitted",
+      "score": 1,
+      "totalMarks": 2,
+      "integrityScore": 100,
+      "answers": {
+        "q1-planck": {
+          "selectedOptionIds": [
+            "opt1-a"
+          ]
+        },
+        "q2-bohr": {
+          "selectedOptionIds": [
+            "opt2-b"
+          ]
+        }
+      },
+      "proctoringEvents": [],
+      "startedAt": "2026-08-30T17:50:33.886Z",
+      "submittedAt": "2026-08-30T17:50:33.924Z",
+      "created_at": "2026-08-30T17:50:33.886Z",
+      "updated_at": "2026-08-30T17:50:33.924Z",
+      "questionResults": [
+        {
+          "questionId": "q1-planck",
+          "questionNumber": 1,
+          "questionText": "What is the energy of a photon with frequency ν?",
+          "type": "mcq",
+          "studentAnswer": "E = hν",
+          "correctAnswer": "E = hν",
+          "isCorrect": true,
+          "marks": 1,
+          "obtainedMarks": 1
+        },
+        {
+          "questionId": "q2-bohr",
+          "questionNumber": 2,
+          "questionText": "Bohr radius for hydrogen ground state is approximately:",
+          "type": "mcq",
+          "studentAnswer": "1.058 Å",
+          "correctAnswer": "0.529 Å",
+          "isCorrect": false,
+          "marks": 1,
+          "obtainedMarks": 0
+        }
+      ]
+    },
+    {
       "id": "att-1788004611655-56f3",
       "examId": "exam-1788004611650-s5y1",
       "examTitle": "Thermodynamics & Reaction Kinetics",
@@ -2188,6 +2433,20 @@
   ],
   "evidence": [
     {
+      "id": "evi-1788112233898-fr5z",
+      "examId": "exam-1788112233879-al7y",
+      "attemptId": "att-1788112233886-el0s",
+      "studentId": "user-1788112233863-xqzj",
+      "evidenceType": "room_scan",
+      "filePath": "/evidence/scan_360_verified.webm",
+      "signedUrl": "",
+      "durationSeconds": 15,
+      "coverageDegrees": 360,
+      "metadata": {},
+      "recordedAt": "2026-08-30T17:50:33.898Z",
+      "createdAt": "2026-08-30T17:50:33.898Z"
+    },
+    {
       "id": "evi-1788003726869-knup",
       "examId": "exam-1788003726829-wgz1",
       "attemptId": "att-1788003726833-7frw",
@@ -2280,9 +2539,47 @@
         "integrityScore": 100
       },
       "recordedAt": "2026-08-29T11:56:51.658Z"
+    },
+    {
+      "id": "evi-sub-1788112233924",
+      "examId": "exam-1788112233879-al7y",
+      "attemptId": "att-1788112233886-el0s",
+      "studentId": "user-1788112233863-xqzj",
+      "evidenceType": "exam_submission",
+      "metadata": {
+        "score": 1,
+        "totalMarks": 2,
+        "correctCount": 1,
+        "incorrectCount": 1,
+        "unattemptedCount": 0,
+        "integrityScore": 100
+      },
+      "recordedAt": "2026-08-30T17:50:33.924Z"
     }
   ],
   "requests": [
+    {
+      "id": "req-1788112233906-rq1y",
+      "studentId": "user-1788112233863-xqzj",
+      "studentName": "Aditya Kumar",
+      "studentEmail": "aditya.1788112233781@chem.edu",
+      "teacherId": "user-1788112233851-k505",
+      "teacherName": "Prof. Alok Verma",
+      "classId": "cls-1788112233857-uhhh",
+      "className": "B.Tech CSE - Advanced Chemistry",
+      "sectionId": "sec-cls-1788112233857-uhhh-a",
+      "sectionName": "Section A",
+      "examId": "exam-1788112233879-al7y",
+      "examTitle": "Quantum & Physical Chemistry Quiz",
+      "attemptId": "att-1788112233886-el0s",
+      "requestType": "EXAM_EXITED",
+      "message": "Browser tab closed unexpectedly",
+      "status": "APPROVED",
+      "teacherResponse": "Approved. You may resume your attempt.",
+      "resolvedAt": "2026-08-30T17:50:33.918Z",
+      "createdAt": "2026-08-30T17:50:33.906Z",
+      "updatedAt": "2026-08-30T17:50:33.918Z"
+    },
     {
       "id": "req-1788004065452-5vrn",
       "studentId": "stu-1788004065409",
@@ -2396,6 +2693,52 @@
   ],
   "results": [
     {
+      "id": "res-att-1788112233886-el0s",
+      "studentId": "user-1788112233863-xqzj",
+      "studentName": "Aditya Kumar",
+      "studentEmail": "aditya.1788112233781@chem.edu",
+      "teacherId": "user-1788112233851-k505",
+      "teacherName": "Prof. Alok Verma",
+      "classId": "cls-1788112233857-uhhh",
+      "className": "B.Tech CSE - Advanced Chemistry",
+      "sectionId": "sec-cls-1788112233857-uhhh-a",
+      "sectionName": "Section A",
+      "examId": "exam-1788112233879-al7y",
+      "examTitle": "Quantum & Physical Chemistry Quiz",
+      "attemptId": "att-1788112233886-el0s",
+      "obtainedMarks": 1,
+      "totalMarks": 2,
+      "percentage": 50,
+      "status": "EVALUATED",
+      "questionResults": [
+        {
+          "questionId": "q1-planck",
+          "questionNumber": 1,
+          "questionText": "What is the energy of a photon with frequency ν?",
+          "type": "mcq",
+          "studentAnswer": "E = hν",
+          "correctAnswer": "E = hν",
+          "isCorrect": true,
+          "marks": 1,
+          "obtainedMarks": 1
+        },
+        {
+          "questionId": "q2-bohr",
+          "questionNumber": 2,
+          "questionText": "Bohr radius for hydrogen ground state is approximately:",
+          "type": "mcq",
+          "studentAnswer": "1.058 Å",
+          "correctAnswer": "0.529 Å",
+          "isCorrect": false,
+          "marks": 1,
+          "obtainedMarks": 0
+        }
+      ],
+      "submittedAt": "2026-08-30T17:50:33.924Z",
+      "createdAt": "2026-08-30T17:50:33.924Z",
+      "updatedAt": "2026-08-30T17:50:33.924Z"
+    },
+    {
       "id": "res-att-1788004611655-56f3",
       "studentId": "stu-s5-aditya-1788004611592",
       "studentName": "Aditya Kumar",
@@ -2473,6 +2816,25 @@
       "submittedAt": "2026-08-29T11:56:51.658Z",
       "createdAt": "2026-08-29T11:56:51.658Z",
       "updatedAt": "2026-08-29T11:56:51.658Z"
+    }
+  ],
+  "complaints": [
+    {
+      "id": "comp-1788112233941-zpc2",
+      "ticketNumber": "TICK-7882",
+      "userId": "user-1788112233863-xqzj",
+      "userName": "Aditya Kumar",
+      "userEmail": "aditya.1788112233781@chem.edu",
+      "userRole": "student",
+      "category": "Proctoring / Camera Issue",
+      "subject": "Minor webcam lag during room scan",
+      "description": "The camera fps dipped during the 360 degree scan.",
+      "screenshotUrl": null,
+      "status": "Resolved",
+      "resolutionNotes": "Verified video evidence integrity score is 100%. Ticket closed.",
+      "resolvedAt": "2026-08-30T17:50:33.948Z",
+      "createdAt": "2026-08-30T17:50:33.941Z",
+      "updatedAt": "2026-08-30T17:50:33.948Z"
     }
   ]
 }
