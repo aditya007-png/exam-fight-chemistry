@@ -1228,8 +1228,9 @@ app.get('/api/evidence/review', (req, res) => {
 // ── 10. Student Requests & Teacher Actions (STEP 4 CORE) ─────────────────────
 
 app.post('/api/requests', (req, res) => {
-  const { studentId, studentName, studentEmail, examId, attemptId, requestType, message } = req.body;
-  if (!studentId || !examId || !message || !message.trim()) {
+  const { studentId, studentName, studentEmail, examId, attemptId, requestType, message, reason } = req.body;
+  const finalMessage = (message || reason || '').trim();
+  if (!studentId || !examId || !finalMessage) {
     return res.status(400).json({ error: 'studentId, examId, and message are required.' });
   }
 
@@ -1287,7 +1288,8 @@ app.post('/api/requests', (req, res) => {
     examTitle: exam.title,
     attemptId: attemptId || null,
     requestType: requestType || 'EXAM_EXITED',
-    message: message.trim(),
+    message: finalMessage,
+    reason: finalMessage,
     status: 'PENDING',
     teacherResponse: null,
     resolvedAt: null,
