@@ -5,7 +5,9 @@ const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const DB_FILE = path.join(__dirname, 'database.json');
+const isVercel = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const SEED_DB_FILE = path.join(__dirname, 'database.json');
+const DB_FILE = isVercel ? path.join('/tmp', 'database.json') : SEED_DB_FILE;
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
@@ -15,8 +17,20 @@ app.use(express.json({ limit: '50mb' }));
 function readDB() {
   try {
     if (!fs.existsSync(DB_FILE)) {
+      if (isVercel && fs.existsSync(SEED_DB_FILE)) {
+        try {
+          const seedData = fs.readFileSync(SEED_DB_FILE, 'utf8');
+          fs.writeFileSync(DB_FILE, seedData, 'utf8');
+          const parsedSeed = JSON.parse(seedData);
+          return parsedSeed;
+        } catch (e) {
+          console.warn('Could not copy seed DB to /tmp:', e);
+        }
+      }
       const initial = { users: [], teacherCodes: [], classes: [], sections: [], enrollments: [], exams: [], attempts: [], evidence: [], requests: [], results: [], complaints: [] };
-      fs.writeFileSync(DB_FILE, JSON.stringify(initial, null, 2), 'utf8');
+      try {
+        fs.writeFileSync(DB_FILE, JSON.stringify(initial, null, 2), 'utf8');
+      } catch (e) {}
       return initial;
     }
     const raw = fs.readFileSync(DB_FILE, 'utf8');
@@ -1485,7 +1499,10 @@ app.delete('/api/complaints/:id', (req, res) => {
 });
 
 // ── Start Express Server ──────────────────────────────────────────────────────
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Exam Fight Chemistry REST Backend running on http://localhost:${PORT}`);
+  });
+}
 
-app.listen(PORT, () => {
-  console.log(`Exam Fight Chemistry REST Backend running on http://localhost:${PORT}`);
-});
+module.exports = app;
