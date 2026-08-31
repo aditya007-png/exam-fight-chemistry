@@ -190,11 +190,13 @@ async function runLoadTest(concurrencyTarget = 50) {
       role: 'student'
     });
     record(regRes);
+    if (!regRes.ok) console.error(`Student ${sIdx} reg failed:`, regRes.data);
     const studentId = regRes.data?.user?.id || `student-${ts}-${sIdx}`;
 
     // B. Student Dashboard & Classes Load
     const dashRes = await api(`/api/enrollments?studentId=${studentId}`);
     record(dashRes);
+    if (!dashRes.ok) console.error(`Student ${sIdx} dash failed:`, dashRes.data);
 
     // C. Student Joins Class Section
     const joinRes = await api('/api/classes/join', 'POST', {
@@ -204,6 +206,7 @@ async function runLoadTest(concurrencyTarget = 50) {
       enrollmentCode: cohort.sectionA?.enrollment_code
     });
     record(joinRes);
+    if (!joinRes.ok) console.error(`Student ${sIdx} join failed:`, joinRes.data);
 
     // Verify teacher relationship
     if (joinRes.data?.enrollment?.teacherName !== cohort.teacherName) {
@@ -213,6 +216,7 @@ async function runLoadTest(concurrencyTarget = 50) {
     // D. Fetch Assigned Exams
     const examsRes = await api(`/api/exams?studentId=${studentId}`);
     record(examsRes);
+    if (!examsRes.ok) console.error(`Student ${sIdx} exams failed:`, examsRes.data);
     const assignedExams = examsRes.data?.exams || [];
     const hasAssigned = assignedExams.some(e => e.id === cohort.exam?.id);
     if (!hasAssigned) {
@@ -230,6 +234,7 @@ async function runLoadTest(concurrencyTarget = 50) {
       startTime: new Date().toISOString()
     });
     record(startRes);
+    if (!startRes.ok) console.error(`Student ${sIdx} start attempt failed:`, startRes.data);
     const attempt = startRes.data?.attempt;
 
     if (!startRes.ok || !attempt || !attempt.id) {
@@ -243,16 +248,19 @@ async function runLoadTest(concurrencyTarget = 50) {
       answers: { [cohort.q1Id]: 'opt2' }
     });
     record(saveRes1);
+    if (!saveRes1.ok) console.error(`Student ${sIdx} save1 failed:`, saveRes1.data);
 
     const saveRes2 = await api(`/api/attempts/${attempt.id}/answers`, 'PUT', {
       studentId,
       answers: { [cohort.q2Id]: 'opt1' }
     });
     record(saveRes2);
+    if (!saveRes2.ok) console.error(`Student ${sIdx} save2 failed:`, saveRes2.data);
 
     // G. Verify Answers Saved in Attempt
     const checkAttempt = await api(`/api/attempts/${attempt.id}?studentId=${studentId}`);
     record(checkAttempt);
+    if (!checkAttempt.ok) console.error(`Student ${sIdx} check attempt failed:`, checkAttempt.data);
     const savedAnswers = checkAttempt.data?.attempt?.answers || {};
     if (savedAnswers[cohort.q1Id] !== 'opt2' || savedAnswers[cohort.q2Id] !== 'opt1') {
       lostAnswers++;
@@ -264,6 +272,7 @@ async function runLoadTest(concurrencyTarget = 50) {
       endTime: new Date().toISOString()
     });
     record(submitRes);
+    if (!submitRes.ok) console.error(`Student ${sIdx} submit failed:`, submitRes.data);
     const result = submitRes.data?.result;
     const score = result ? (result.obtainedMarks ?? result.score) : null;
     if (score !== 10) {
@@ -273,6 +282,7 @@ async function runLoadTest(concurrencyTarget = 50) {
     // I. Student Fetches Transcripts
     const myResultsRes = await api(`/api/results?studentId=${studentId}`);
     record(myResultsRes);
+    if (!myResultsRes.ok) console.error(`Student ${sIdx} results fetch failed:`, myResultsRes.data);
   });
 
   // Concurrently run Teacher Dashboard Operations alongside Student Exam operations
