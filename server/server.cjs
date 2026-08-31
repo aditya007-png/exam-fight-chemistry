@@ -285,12 +285,26 @@ app.get('/api/classes', (req, res) => {
 });
 
 app.post('/api/classes', (req, res) => {
-  const { teacherId, teacherName, name, classCode, academicYear, description } = req.body;
+  const { id, teacherId, teacherName, name, classCode, academicYear, description } = req.body;
   if (!name || !classCode) return res.status(400).json({ error: 'Class name and code are required.' });
 
   const db = readDB();
-  const newClassId = `cls-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
   const cleanCode = classCode.trim().toUpperCase();
+
+  if (id) {
+    const existing = db.classes.find(c => c.id === id);
+    if (existing) {
+      const classSections = db.sections.filter(s => s.class_id === existing.id);
+      const classEnrollments = db.enrollments.filter(e => (e.classId === existing.id || e.class_id === existing.id) && e.status === 'active');
+      return res.json({
+        success: true,
+        class: { ...existing, sectionsCount: classSections.length, studentsCount: classEnrollments.length, sections: classSections },
+        section: classSections[0] || null,
+      });
+    }
+  }
+
+  const newClassId = id || `cls-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
 
   const teacherUser = db.users.find(u => u.id === teacherId);
   const actualTeacherName = (teacherName && teacherName !== 'Faculty Instructor')

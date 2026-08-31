@@ -80,13 +80,14 @@ export const saveStoredClasses = (classesToMerge: AcademicClass[]): void => {
 };
 
 export const fetchClassesFromDB = async (teacherId?: string): Promise<AcademicClass[]> => {
+  const localClasses = getStoredClasses(teacherId);
   try {
     // 1. Try REST API server
     const apiRes = await fetch(`/api/classes${teacherId ? `?teacherId=${teacherId}` : ''}`);
     if (apiRes.ok) {
       const data = await apiRes.json();
       if (data.success && Array.isArray(data.classes)) {
-        const mapped: AcademicClass[] = data.classes.map((c: any) => {
+        const serverMapped: AcademicClass[] = data.classes.map((c: any) => {
           const classSections: AcademicSection[] | undefined = c.sections
             ? c.sections.map((s: any) => ({
                 id: s.id,
@@ -113,12 +114,48 @@ export const fetchClassesFromDB = async (teacherId?: string): Promise<AcademicCl
             sections: classSections,
           };
         });
-        saveStoredClasses(mapped);
-        const allSections = mapped.flatMap((c) => c.sections || []);
+
+        // Merge local and server classes
+        const classMap = new Map<string, AcademicClass>();
+        localClasses.forEach((c) => classMap.set(c.id, c));
+        serverMapped.forEach((c) => {
+          const existing = classMap.get(c.id);
+          classMap.set(c.id, {
+            ...existing,
+            ...c,
+            sections: c.sections || existing?.sections,
+            sectionsCount: c.sectionsCount ?? existing?.sectionsCount ?? (existing?.sections ? existing.sections.length : 1),
+            studentsCount: c.studentsCount ?? existing?.studentsCount ?? 0,
+          });
+        });
+
+        const merged = Array.from(classMap.values());
+        saveStoredClasses(merged);
+        const allSections = merged.flatMap((c) => c.sections || []);
         if (allSections.length > 0) {
           saveStoredSections(allSections);
         }
-        return mapped;
+
+        // If local had classes that this serverless instance was missing, sync to server in background
+        for (const localCls of localClasses) {
+          if (!serverMapped.some((s) => s.id === localCls.id)) {
+            fetch('/api/classes', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: localCls.id,
+                teacherId: localCls.teacherId,
+                teacherName: localCls.teacherName,
+                name: localCls.name,
+                classCode: localCls.classCode,
+                academicYear: localCls.academicYear,
+                description: localCls.description,
+              }),
+            }).catch(() => {});
+          }
+        }
+
+        return merged;
       }
     }
   } catch (err) {
@@ -149,7 +186,7 @@ export const fetchClassesFromDB = async (teacherId?: string): Promise<AcademicCl
       }
     }
   }
-  return getStoredClasses(teacherId);
+  return localClasses;
 };
 
 export const getClassById = (classId: string): AcademicClass | null => {
