@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getStoredExams, getAllStoredAttempts, fetchExamsFromDB, fetchAttemptsFromDB } from '../../lib/examService';
-import { getStoredClasses, getStoredEnrollments, fetchClassesFromDB, fetchEnrollmentsFromDB } from '../../lib/classService';
+import { fetchExamsFromDB, fetchAttemptsFromDB } from '../../lib/examService';
+import { fetchClassesFromDB, fetchEnrollmentsFromDB } from '../../lib/classService';
 import { fetchTeacherRequests } from '../../lib/requestService';
 import { ExamRequest } from '../../types/request';
 import { ExamItem } from '../../types/dashboard';
@@ -34,21 +34,23 @@ export const TeacherDashboard: React.FC = () => {
 
   const loadTeacherDashboard = async () => {
     if (teacherId) {
-      const [, , , , reqs] = await Promise.all([
-        fetchClassesFromDB(teacherId),
-        fetchEnrollmentsFromDB(),
-        fetchExamsFromDB({ teacherId }),
-        fetchAttemptsFromDB(),
-        fetchTeacherRequests(teacherId),
-      ]);
+      try {
+        const [dbClasses, dbEnrollments, dbExams, dbAttempts, reqs] = await Promise.all([
+          fetchClassesFromDB(teacherId),
+          fetchEnrollmentsFromDB({ teacherId }),
+          fetchExamsFromDB({ teacherId }),
+          fetchAttemptsFromDB(),
+          fetchTeacherRequests(teacherId),
+        ]);
 
-      setExams(getStoredExams().filter((e) => !e.teacherId || e.teacherId === teacherId));
-      setAttempts(getAllStoredAttempts());
-      const clsList = getStoredClasses(teacherId);
-      setClasses(clsList);
-      const enrList = getStoredEnrollments({ teacherId });
-      setEnrolledStudentsCount(enrList.length);
-      setRequests(reqs);
+        setClasses(dbClasses);
+        setEnrolledStudentsCount(dbEnrollments.filter((e) => e.status === 'active').length);
+        setExams(dbExams);
+        setAttempts(dbAttempts);
+        setRequests(reqs);
+      } catch (err) {
+        console.warn('TeacherDashboard load error:', err);
+      }
     }
   };
 

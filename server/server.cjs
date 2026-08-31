@@ -271,7 +271,17 @@ app.get('/api/classes', (req, res) => {
   if (teacherId) {
     list = list.filter(c => c.teacher_id === teacherId);
   }
-  res.json({ success: true, classes: list });
+  const enriched = list.map(c => {
+    const classSections = db.sections.filter(s => s.class_id === c.id);
+    const classEnrollments = db.enrollments.filter(e => e.classId === c.id && e.status === 'active');
+    return {
+      ...c,
+      sectionsCount: classSections.length,
+      studentsCount: classEnrollments.length,
+      sections: classSections,
+    };
+  });
+  res.json({ success: true, classes: enriched });
 });
 
 app.post('/api/classes', (req, res) => {
@@ -318,7 +328,11 @@ app.post('/api/classes', (req, res) => {
   db.sections.unshift(sectionA);
 
   writeDB(db);
-  res.json({ success: true, class: newClass, section: sectionA });
+  res.json({
+    success: true,
+    class: { ...newClass, sectionsCount: 1, studentsCount: 0, sections: [sectionA] },
+    section: sectionA,
+  });
 });
 
 app.delete('/api/classes/:id', (req, res) => {
@@ -339,7 +353,16 @@ app.get('/api/sections', (req, res) => {
   if (classId) {
     list = list.filter(s => s.class_id === classId);
   }
-  res.json({ success: true, sections: list });
+  const enriched = list.map(s => {
+    const parentClass = db.classes.find(c => c.id === s.class_id);
+    const secEnrollments = db.enrollments.filter(e => e.sectionId === s.id && e.status === 'active');
+    return {
+      ...s,
+      className: s.className || parentClass?.name || 'Class',
+      studentsCount: secEnrollments.length,
+    };
+  });
+  res.json({ success: true, sections: enriched });
 });
 
 app.post('/api/sections', (req, res) => {

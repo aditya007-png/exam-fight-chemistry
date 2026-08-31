@@ -10,6 +10,9 @@ export interface AcademicClass {
   academicYear: string; // e.g. "2026-27"
   description?: string;
   createdAt: string;
+  sectionsCount?: number;
+  studentsCount?: number;
+  sections?: AcademicSection[];
 }
 
 export interface AcademicSection {
@@ -19,6 +22,7 @@ export interface AcademicSection {
   name: string; // e.g. "Section A"
   enrollmentCode: string; // e.g. "CSE-A7K29"
   createdAt: string;
+  studentsCount?: number;
 }
 
 export interface ClassEnrollment {

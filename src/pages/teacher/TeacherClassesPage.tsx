@@ -50,11 +50,13 @@ export const TeacherClassesPage: React.FC = () => {
   const teacherId = user?.id || '';
   const teacherName = user?.full_name || 'Dr. Jatin Sharma';
 
-  const [classes, setClasses] = useState<AcademicClass[]>([]);
+  const [classes, setClasses] = useState<AcademicClass[]>(() => getStoredClasses(teacherId));
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [sections, setSections] = useState<AcademicSection[]>([]);
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
   const [enrollments, setEnrollments] = useState<ClassEnrollment[]>([]);
+  const [allTeacherEnrollments, setAllTeacherEnrollments] = useState<ClassEnrollment[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [successToast, setSuccessToast] = useState<string | null>(null);
@@ -77,62 +79,69 @@ export const TeacherClassesPage: React.FC = () => {
   const previousCountRef = useRef<number>(0);
 
   const loadData = async () => {
-    let clsList = getStoredClasses(teacherId);
-    if (clsList.length === 0) {
-      clsList = getStoredClasses();
+    if (!teacherId) {
+      setIsLoading(false);
+      return;
     }
-    setClasses(clsList);
 
-    if (teacherId) {
-      const [dbClasses] = await Promise.all([
+    try {
+      const [dbClasses, dbEnrollments] = await Promise.all([
         fetchClassesFromDB(teacherId),
-        fetchEnrollmentsFromDB(),
+        fetchEnrollmentsFromDB({ teacherId }),
       ]);
+
+      setClasses(dbClasses);
+      setAllTeacherEnrollments(dbEnrollments);
+
       if (dbClasses.length > 0) {
-        clsList = dbClasses;
-        setClasses(dbClasses);
-      }
-    }
+        const activeCls = dbClasses.find((c) => c.id === selectedClassId) || dbClasses[0];
+        setSelectedClassId(activeCls.id);
 
-    if (clsList.length > 0) {
-      const activeClsId = selectedClassId || clsList[0].id;
-      if (!selectedClassId) setSelectedClassId(activeClsId);
-
-      await fetchSectionsFromDB(activeClsId);
-      const secList = getStoredSections(activeClsId);
-      setSections(secList);
-
-      const activeSecId = selectedSectionId || (secList.length > 0 ? secList[0].id : null);
-      if (!selectedSectionId && activeSecId) setSelectedSectionId(activeSecId);
-
-      if (activeSecId) {
-        const enrList = getStoredEnrollments({ sectionId: activeSecId, teacherId });
-        setEnrollments(enrList);
-
-        // Check if a new student joined while viewing
-        if (previousCountRef.current > 0 && enrList.length > previousCountRef.current) {
-          const newest = enrList[0];
-          setLiveJoinedNotification(`🎉 New student joined ${newest.sectionName}: ${newest.studentName} (${newest.studentEmail})`);
-          setTimeout(() => setLiveJoinedNotification(null), 6000);
+        let secList = activeCls.sections || [];
+        if (secList.length === 0) {
+          secList = await fetchSectionsFromDB(activeCls.id);
         }
-        previousCountRef.current = enrList.length;
+        setSections(secList);
+
+        const activeSec = secList.find((s) => s.id === selectedSectionId) || (secList.length > 0 ? secList[0] : null);
+        const activeSecId = activeSec ? activeSec.id : null;
+        setSelectedSectionId(activeSecId);
+
+        if (activeSecId) {
+          const secEnrs = dbEnrollments.filter((e) => e.sectionId === activeSecId && e.status === 'active');
+          setEnrollments(secEnrs);
+
+          if (previousCountRef.current > 0 && secEnrs.length > previousCountRef.current) {
+            const newest = secEnrs[0];
+            setLiveJoinedNotification(`🎉 New student joined ${newest.sectionName}: ${newest.studentName} (${newest.studentEmail})`);
+            setTimeout(() => setLiveJoinedNotification(null), 6000);
+          }
+          previousCountRef.current = secEnrs.length;
+        } else {
+          setEnrollments([]);
+          previousCountRef.current = 0;
+        }
       } else {
+        setSelectedClassId(null);
+        setSelectedSectionId(null);
+        setSections([]);
         setEnrollments([]);
         previousCountRef.current = 0;
       }
-    } else {
-      setSections([]);
-      setEnrollments([]);
-      previousCountRef.current = 0;
+    } catch (err) {
+      console.warn('TeacherClassesPage loadData error:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
     loadData();
-  }, [teacherId, selectedClassId, selectedSectionId, location.key]);
+  }, [teacherId, location.key]);
 
   // Real-time Background Polling Every 5 Seconds
   useEffect(() => {
+    if (!teacherId) return;
     const pollInterval = setInterval(() => {
       loadData();
     }, 5000);
@@ -142,12 +151,15 @@ export const TeacherClassesPage: React.FC = () => {
 
   const handleSelectClass = async (clsId: string) => {
     setSelectedClassId(clsId);
-    await fetchSectionsFromDB(clsId);
-    const secList = getStoredSections(clsId);
+    const targetCls = classes.find((c) => c.id === clsId);
+    let secList = targetCls?.sections || [];
+    if (secList.length === 0) {
+      secList = await fetchSectionsFromDB(clsId);
+    }
     setSections(secList);
     if (secList.length > 0) {
       setSelectedSectionId(secList[0].id);
-      const enrs = getStoredEnrollments({ sectionId: secList[0].id, teacherId });
+      const enrs = allTeacherEnrollments.filter((e) => e.sectionId === secList[0].id && e.status === 'active');
       setEnrollments(enrs);
       previousCountRef.current = enrs.length;
     } else {
@@ -159,7 +171,7 @@ export const TeacherClassesPage: React.FC = () => {
 
   const handleSelectSection = (secId: string) => {
     setSelectedSectionId(secId);
-    const enrs = getStoredEnrollments({ sectionId: secId, teacherId });
+    const enrs = allTeacherEnrollments.filter((e) => e.sectionId === secId && e.status === 'active');
     setEnrollments(enrs);
     previousCountRef.current = enrs.length;
   };
@@ -312,7 +324,12 @@ export const TeacherClassesPage: React.FC = () => {
         </Button>
       </div>
 
-      {classes.length === 0 ? (
+      {isLoading && classes.length === 0 ? (
+        <div className="rounded-2xl bg-white border border-slate-200 p-12 text-center shadow-card space-y-3">
+          <RefreshCw className="w-8 h-8 text-blue-600 animate-spin mx-auto" />
+          <p className="text-sm font-semibold text-slate-600">Loading your academic cohorts...</p>
+        </div>
+      ) : classes.length === 0 ? (
         /* Empty State */
         <div className="rounded-2xl bg-white border border-slate-200 p-12 text-center shadow-card space-y-4">
           <div className="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center mx-auto text-blue-600">
@@ -355,8 +372,12 @@ export const TeacherClassesPage: React.FC = () => {
               <div className="space-y-2">
                 {classes.map((cls) => {
                   const isSelected = cls.id === selectedClassId;
-                  const clsSections = getStoredSections(cls.id);
-                  const clsEnrollments = getStoredEnrollments({ classId: cls.id, teacherId });
+                  const clsSections = cls.sections || getStoredSections(cls.id);
+                  const secCount = cls.sectionsCount ?? (clsSections ? clsSections.length : 0);
+                  const clsEnrollments = allTeacherEnrollments.filter(
+                    (e) => e.classId === cls.id && e.status === 'active'
+                  );
+                  const stuCount = cls.studentsCount ?? clsEnrollments.length;
 
                   return (
                     <div
@@ -393,11 +414,11 @@ export const TeacherClassesPage: React.FC = () => {
                       <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100">
                         <span className="flex items-center gap-1">
                           <Layers className="w-3 h-3 text-slate-400" />
-                          {clsSections.length} {clsSections.length === 1 ? 'Section' : 'Sections'}
+                          {secCount} {secCount === 1 ? 'Section' : 'Sections'}
                         </span>
                         <span className="flex items-center gap-1 font-bold text-slate-700">
                           <Users className="w-3 h-3 text-indigo-600" />
-                          {clsEnrollments.length} Students
+                          {stuCount} Students
                         </span>
                         <span className="text-slate-400">{cls.academicYear}</span>
                       </div>

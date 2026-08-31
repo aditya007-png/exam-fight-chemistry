@@ -67,9 +67,13 @@ export const getStoredClasses = (teacherId?: string): AcademicClass[] => {
   }
 };
 
-export const saveStoredClasses = (classes: AcademicClass[]): void => {
+export const saveStoredClasses = (classesToMerge: AcademicClass[]): void => {
   try {
-    localStorage.setItem(CLASSES_STORAGE_KEY, JSON.stringify(classes));
+    const existing = getStoredClasses();
+    const map = new Map<string, AcademicClass>();
+    existing.forEach((c) => map.set(c.id, c));
+    classesToMerge.forEach((c) => map.set(c.id, c));
+    localStorage.setItem(CLASSES_STORAGE_KEY, JSON.stringify(Array.from(map.values())));
   } catch (err) {
     console.error('Error saving classes to storage:', err);
   }
@@ -82,17 +86,38 @@ export const fetchClassesFromDB = async (teacherId?: string): Promise<AcademicCl
     if (apiRes.ok) {
       const data = await apiRes.json();
       if (data.success && Array.isArray(data.classes)) {
-        const mapped: AcademicClass[] = data.classes.map((c: any) => ({
-          id: c.id,
-          teacherId: c.teacher_id,
-          teacherName: resolveTeacherName(c.teacher_id, c.teacher_name),
-          name: c.name,
-          classCode: c.code,
-          academicYear: c.academic_year || '2026-27',
-          description: c.description || '',
-          createdAt: c.created_at,
-        }));
+        const mapped: AcademicClass[] = data.classes.map((c: any) => {
+          const classSections: AcademicSection[] | undefined = c.sections
+            ? c.sections.map((s: any) => ({
+                id: s.id,
+                classId: s.class_id || c.id,
+                className: s.className || c.name,
+                name: s.name,
+                enrollmentCode: s.enrollment_code,
+                createdAt: s.created_at,
+                studentsCount: s.studentsCount,
+              }))
+            : undefined;
+
+          return {
+            id: c.id,
+            teacherId: c.teacher_id,
+            teacherName: resolveTeacherName(c.teacher_id, c.teacher_name),
+            name: c.name,
+            classCode: c.code,
+            academicYear: c.academic_year || '2026-27',
+            description: c.description || '',
+            createdAt: c.created_at,
+            sectionsCount: c.sectionsCount ?? (classSections ? classSections.length : undefined),
+            studentsCount: c.studentsCount,
+            sections: classSections,
+          };
+        });
         saveStoredClasses(mapped);
+        const allSections = mapped.flatMap((c) => c.sections || []);
+        if (allSections.length > 0) {
+          saveStoredSections(allSections);
+        }
         return mapped;
       }
     }
@@ -261,9 +286,13 @@ export const getStoredSections = (classId?: string): AcademicSection[] => {
   }
 };
 
-export const saveStoredSections = (sections: AcademicSection[]): void => {
+export const saveStoredSections = (sectionsToMerge: AcademicSection[]): void => {
   try {
-    localStorage.setItem(SECTIONS_STORAGE_KEY, JSON.stringify(sections));
+    const existing = getStoredSections();
+    const map = new Map<string, AcademicSection>();
+    existing.forEach((s) => map.set(s.id, s));
+    sectionsToMerge.forEach((s) => map.set(s.id, s));
+    localStorage.setItem(SECTIONS_STORAGE_KEY, JSON.stringify(Array.from(map.values())));
   } catch (err) {
     console.error('Error saving sections:', err);
   }
@@ -283,6 +312,7 @@ export const fetchSectionsFromDB = async (classId?: string): Promise<AcademicSec
           name: s.name,
           enrollmentCode: s.enrollment_code,
           createdAt: s.created_at,
+          studentsCount: s.studentsCount,
         }));
         saveStoredSections(mapped);
         return mapped;
@@ -353,8 +383,8 @@ export const getSectionByCode = (code: string): AcademicSection | null => {
   });
 
   if (foundClass) {
-    const sec = sections.find((s) => s.classId === foundClass.id);
-    if (sec) return sec;
+    const classSections = getStoredSections(foundClass.id);
+    if (classSections.length > 0) return classSections[0];
   }
 
   return null;
@@ -366,17 +396,14 @@ export const createSection = async (
   name: string,
   classCode?: string
 ): Promise<AcademicSection> => {
-  const sections = getStoredSections();
-  const cls = getClassById(classId);
-  const codePrefix = classCode || cls?.classCode || 'CHEM';
-  let enrollmentCode = generateEnrollmentCode(codePrefix, name.trim());
+  let enrollmentCode = generateEnrollmentCode(classCode || 'CHEM', name);
   let newSectionId = `sec-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
 
   try {
     const res = await fetch('/api/sections', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ classId, className: className || cls?.name || 'Class', name: name.trim(), classCode: codePrefix }),
+      body: JSON.stringify({ classId, className, name: name.trim(), classCode }),
     });
     if (res.ok) {
       const data = await res.json();
@@ -385,42 +412,64 @@ export const createSection = async (
         enrollmentCode = data.section.enrollment_code;
       }
     }
-  } catch {}
+  } catch (apiErr) {
+    if (isSupabaseConfigured() && !classId.startsWith('cls-')) {
+      try {
+        const { data, error } = await supabase.from('sections').insert({
+          class_id: classId,
+          name: name.trim(),
+          enrollment_code: enrollmentCode,
+        }).select().single();
+
+        if (!error && data) {
+          newSectionId = data.id;
+          enrollmentCode = data.enrollment_code;
+        }
+      } catch (err) {
+        console.warn('DB createSection error:', err);
+      }
+    }
+  }
 
   const newSection: AcademicSection = {
     id: newSectionId,
     classId,
-    className: className || cls?.name || 'Class',
+    className,
     name: name.trim(),
     enrollmentCode,
     createdAt: new Date().toISOString(),
+    studentsCount: 0,
   };
 
-  sections.push(newSection);
+  const sections = getStoredSections();
+  sections.unshift(newSection);
   saveStoredSections(sections);
+
   return newSection;
 };
 
 export const regenerateSectionCode = async (sectionId: string): Promise<string> => {
-  const sections = getStoredSections();
-  const idx = sections.findIndex((s) => s.id === sectionId);
-  if (idx < 0) return '';
-
-  const cls = getClassById(sections[idx].classId);
-  let newCode = generateEnrollmentCode(cls?.classCode || 'CHEM', sections[idx].name);
+  const section = getSectionById(sectionId);
+  const cls = section ? getClassById(section.classId) : null;
+  const newCode = generateEnrollmentCode(cls?.classCode || 'CHEM', section?.name || 'A');
 
   try {
-    const res = await fetch(`/api/sections/${sectionId}/regenerate-code`, { method: 'PUT' });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.success && data.enrollment_code) {
-        newCode = data.enrollment_code;
-      }
-    }
+    await fetch(`/api/sections/${sectionId}/regenerate-code`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch {}
 
-  sections[idx].enrollmentCode = newCode;
-  saveStoredSections(sections);
+  if (section) {
+    section.enrollmentCode = newCode;
+    const sections = getStoredSections();
+    const idx = sections.findIndex((s) => s.id === sectionId);
+    if (idx >= 0) {
+      sections[idx] = section;
+      saveStoredSections(sections);
+    }
+  }
+
   return newCode;
 };
 
@@ -440,10 +489,10 @@ export const deleteSection = async (sectionId: string): Promise<void> => {
 
 export const getStoredEnrollments = (filters?: {
   sectionId?: string;
+  classId?: string;
   studentId?: string;
   studentEmail?: string;
   teacherId?: string;
-  classId?: string;
 }): ClassEnrollment[] => {
   try {
     const raw = localStorage.getItem(ENROLLMENTS_STORAGE_KEY);
@@ -492,17 +541,34 @@ export const getStoredEnrollments = (filters?: {
   }
 };
 
-export const saveStoredEnrollments = (enrollments: ClassEnrollment[]): void => {
+export const saveStoredEnrollments = (enrollmentsToMerge: ClassEnrollment[]): void => {
   try {
-    localStorage.setItem(ENROLLMENTS_STORAGE_KEY, JSON.stringify(enrollments));
+    const existing = getStoredEnrollments();
+    const map = new Map<string, ClassEnrollment>();
+    existing.forEach((e) => map.set(e.id, e));
+    enrollmentsToMerge.forEach((e) => map.set(e.id, e));
+    localStorage.setItem(ENROLLMENTS_STORAGE_KEY, JSON.stringify(Array.from(map.values())));
   } catch (err) {
     console.error('Error saving enrollments:', err);
   }
 };
 
-export const fetchEnrollmentsFromDB = async (studentId?: string): Promise<ClassEnrollment[]> => {
+export const fetchEnrollmentsFromDB = async (
+  filters?: { studentId?: string; classId?: string; sectionId?: string; teacherId?: string } | string
+): Promise<ClassEnrollment[]> => {
   try {
-    const res = await fetch(`/api/enrollments${studentId ? `?studentId=${studentId}` : ''}`);
+    const params = new URLSearchParams();
+    if (typeof filters === 'string' && filters) {
+      params.set('studentId', filters);
+    } else if (typeof filters === 'object' && filters) {
+      if (filters.studentId) params.set('studentId', filters.studentId);
+      if (filters.classId) params.set('classId', filters.classId);
+      if (filters.sectionId) params.set('sectionId', filters.sectionId);
+      if (filters.teacherId) params.set('teacherId', filters.teacherId);
+    }
+
+    const qs = params.toString();
+    const res = await fetch(`/api/enrollments${qs ? `?${qs}` : ''}`);
     if (res.ok) {
       const data = await res.json();
       if (data.success && Array.isArray(data.enrollments)) {
@@ -512,7 +578,8 @@ export const fetchEnrollmentsFromDB = async (studentId?: string): Promise<ClassE
     }
   } catch (err) {}
 
-  return getStoredEnrollments({ studentId });
+  const filterObj = typeof filters === 'string' ? { studentId: filters } : (filters || {});
+  return getStoredEnrollments(filterObj);
 };
 
 export const joinClassByCode = async (
