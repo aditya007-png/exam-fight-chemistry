@@ -12,46 +12,117 @@ const DB_FILE = isVercel ? path.join('/tmp', 'database.json') : SEED_DB_FILE;
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
-// ── Database Helpers ─────────────────────────────────────────────────────────
+// ── High-Performance In-Memory DB Engine with Non-blocking Atomic Persistence ──
+
+let memDB = null;
+let isFlushing = false;
+let pendingFlush = false;
+let flushTimer = null;
+
+function initMemDB() {
+  if (memDB) return memDB;
+  try {
+    if (fs.existsSync(DB_FILE)) {
+      const raw = fs.readFileSync(DB_FILE, 'utf8');
+      memDB = JSON.parse(raw);
+    } else if (isVercel && fs.existsSync(SEED_DB_FILE)) {
+      const raw = fs.readFileSync(SEED_DB_FILE, 'utf8');
+      memDB = JSON.parse(raw);
+      try {
+        fs.writeFileSync(DB_FILE, raw, 'utf8');
+      } catch (e) {}
+    } else {
+      memDB = {
+        users: [],
+        teacherCodes: [],
+        classes: [],
+        sections: [],
+        enrollments: [],
+        exams: [],
+        attempts: [],
+        evidence: [],
+        requests: [],
+        results: [],
+        complaints: []
+      };
+    }
+  } catch (err) {
+    console.error('Failed to init memory DB from disk:', err);
+    memDB = {
+      users: [],
+      teacherCodes: [],
+      classes: [],
+      sections: [],
+      enrollments: [],
+      exams: [],
+      attempts: [],
+      evidence: [],
+      requests: [],
+      results: [],
+      complaints: []
+    };
+  }
+
+  if (!memDB.users) memDB.users = [];
+  if (!memDB.teacherCodes) memDB.teacherCodes = [];
+  if (!memDB.classes) memDB.classes = [];
+  if (!memDB.sections) memDB.sections = [];
+  if (!memDB.enrollments) memDB.enrollments = [];
+  if (!memDB.exams) memDB.exams = [];
+  if (!memDB.attempts) memDB.attempts = [];
+  if (!memDB.evidence) memDB.evidence = [];
+  if (!memDB.requests) memDB.requests = [];
+  if (!memDB.results) memDB.results = [];
+  if (!memDB.complaints) memDB.complaints = [];
+
+  return memDB;
+}
 
 function readDB() {
-  try {
-    if (!fs.existsSync(DB_FILE)) {
-      if (isVercel && fs.existsSync(SEED_DB_FILE)) {
-        try {
-          const seedData = fs.readFileSync(SEED_DB_FILE, 'utf8');
-          fs.writeFileSync(DB_FILE, seedData, 'utf8');
-          const parsedSeed = JSON.parse(seedData);
-          return parsedSeed;
-        } catch (e) {
-          console.warn('Could not copy seed DB to /tmp:', e);
-        }
-      }
-      const initial = { users: [], teacherCodes: [], classes: [], sections: [], enrollments: [], exams: [], attempts: [], evidence: [], requests: [], results: [], complaints: [] };
-      try {
-        fs.writeFileSync(DB_FILE, JSON.stringify(initial, null, 2), 'utf8');
-      } catch (e) {}
-      return initial;
-    }
-    const raw = fs.readFileSync(DB_FILE, 'utf8');
-    const parsed = JSON.parse(raw);
-    if (!parsed.requests) parsed.requests = [];
-    if (!parsed.results) parsed.results = [];
-    if (!parsed.complaints) parsed.complaints = [];
-    return parsed;
-  } catch (err) {
-    console.error('DB read error:', err);
-    return { users: [], teacherCodes: [], classes: [], sections: [], enrollments: [], exams: [], attempts: [], evidence: [], requests: [], results: [], complaints: [] };
+  if (!memDB) initMemDB();
+  return memDB;
+}
+
+function flushDBToDisk() {
+  if (!memDB) return;
+  if (isFlushing) {
+    pendingFlush = true;
+    return;
   }
+  isFlushing = true;
+  pendingFlush = false;
+
+  const dataStr = JSON.stringify(memDB, null, 2);
+  const tmpFile = `${DB_FILE}.${Date.now()}.tmp`;
+
+  fs.writeFile(tmpFile, dataStr, 'utf8', (err) => {
+    if (err) {
+      console.warn('Async disk write warning:', err);
+      isFlushing = false;
+      return;
+    }
+    fs.rename(tmpFile, DB_FILE, (renameErr) => {
+      isFlushing = false;
+      if (renameErr) {
+        console.warn('Atomic rename warning:', renameErr);
+      }
+      if (pendingFlush) {
+        flushDBToDisk();
+      }
+    });
+  });
 }
 
 function writeDB(data) {
-  try {
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
-  } catch (err) {
-    console.error('DB write error:', err);
-  }
+  if (data) memDB = data;
+  if (flushTimer) clearTimeout(flushTimer);
+  flushTimer = setTimeout(() => {
+    flushDBToDisk();
+  }, 100);
 }
+
+// Pre-warm database on boot
+initMemDB();
 
 function fuzzyNormalize(str) {
   return (str || '')
