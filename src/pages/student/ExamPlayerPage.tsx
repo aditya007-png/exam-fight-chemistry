@@ -22,8 +22,6 @@ import {
 import { ExamAttempt } from '../../types/evidence';
 import {
   uploadRoomScanVideo,
-  requestExamRestart,
-  checkExamRestartStatus,
 } from '../../lib/evidenceService';
 import { createStudentRequest } from '../../lib/requestService';
 import { ExamQuestion, StudentAnswerState } from '../../types/exam';
@@ -299,75 +297,69 @@ const InnerExamPlayer: React.FC = () => {
     return () => clearInterval(timer);
   }, [currentStep]);
 
-  // Polling for teacher approval when in tab-switch or critical termination
+  // Polling for teacher approval from real backend DB when interrupted
   useEffect(() => {
     if (currentStep !== 'terminated_tab_switch' && currentStep !== 'terminated_proctoring') return;
-    if (!terminationInfo?.attemptId) return;
+    if (!user?.id) return;
 
     const interval = setInterval(async () => {
-      const statusObj = await checkExamRestartStatus(terminationInfo.attemptId);
-      if (statusObj && statusObj.status === 'granted') {
-        setRestartStatus('granted');
+      try {
+        const res = await fetch(`/api/requests?studentId=${encodeURIComponent(user.id)}&examId=${encodeURIComponent(activeExamId)}`);
+        if (res.ok) {
+          const data = await res.json();
+          const reqs = data.requests || [];
+          const matched = reqs.find((r: any) =>
+            (terminationInfo?.attemptId ? r.attemptId === terminationInfo.attemptId : true)
+          );
+          if (matched) {
+            if (matched.status === 'APPROVED') {
+              setRestartStatus('granted');
+            } else if (matched.status === 'REJECTED') {
+              setRestartStatus('rejected');
+            } else if (matched.status === 'PENDING') {
+              setRestartStatus('pending');
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Request status polling:', err);
       }
     }, 1500);
 
     return () => clearInterval(interval);
-  }, [currentStep, terminationInfo]);
+  }, [currentStep, user?.id, activeExamId, terminationInfo?.attemptId]);
 
   // Student requests teacher permission to restart
   const handleRequestRestartFromTeacher = async () => {
-    if (!terminationInfo) return;
+    if (!terminationInfo || !user?.id) return;
     setIsRequestingRestart(true);
 
     const messageText = studentNote.trim() || terminationInfo.reason || 'Exam exited unexpectedly. Requesting permission to resume examination.';
 
-    await createStudentRequest({
-      studentId: user?.id || 'stu-001',
-      studentName: user?.full_name || 'Candidate',
-      studentEmail: user?.email || 'student@chem.edu',
+    const res = await createStudentRequest({
+      studentId: user.id,
+      studentName: user.full_name || 'Candidate',
+      studentEmail: user.email || 'student@chem.edu',
       examId: activeExamId,
       attemptId: terminationInfo.attemptId,
       requestType: 'EXAM_EXITED',
       message: messageText,
     });
 
-    await requestExamRestart({
-      attemptId: terminationInfo.attemptId,
-      studentId: user?.id || 'stu-001',
-      studentName: user?.full_name || 'Candidate',
-      studentEmail: user?.email || 'student@chem.edu',
-      examId: activeExamId,
-      examTitle: exam?.title || 'Chemistry Examination',
-      violationReason: terminationInfo.reason || 'Tab Switch Violation',
-      studentNote: studentNote.trim() || undefined,
-    });
-
-    setTimeout(() => {
-      setIsRequestingRestart(false);
+    setIsRequestingRestart(false);
+    if (res.success) {
       setRestartStatus('pending');
-    }, 600);
+    } else {
+      alert(res.error || 'Failed to submit request.');
+    }
   };
 
-  // Fresh Exam Attempt Reset after Teacher Permission Granted
-  const handleStartFreshExam = () => {
-    const freshAnswers: Record<string, StudentAnswerState> = {};
-    questions.forEach((q, idx) => {
-      freshAnswers[q.id] = {
-        questionId: q.id,
-        selectedOptionIds: [],
-        numericalAnswer: '',
-        mechanismText: '',
-        isMarkedForReview: false,
-        timeSpentSeconds: 0,
-        isVisited: idx === 0,
-      };
-    });
-    setAnswers(freshAnswers);
-    setCurrentIndex(0);
-    setRemainingSeconds((exam?.durationMinutes || 60) * 60);
+  // Resume Existing Exam Attempt after Teacher Permission Granted
+  const handleResumeExam = () => {
     setRestartStatus('none');
     setTerminationInfo(null);
-    setCurrentStep('instructions');
+    setCurrentStep('in_exam');
+    proctoring.enterFullscreen();
   };
 
   // Handle Final Exam Submission
@@ -902,10 +894,15 @@ const InnerExamPlayer: React.FC = () => {
                   size="md"
                   className="w-full font-bold text-xs"
                   leftIcon={<RotateCcw className="w-4 h-4" />}
-                  onClick={handleStartFreshExam}
+                  onClick={handleResumeExam}
                 >
                   RESUME EXAMINATION
                 </Button>
+              </div>
+            ) : restartStatus === 'rejected' ? (
+              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 space-y-1 text-center font-semibold">
+                <p>⛔ Re-entry Request Rejected by Instructor.</p>
+                <p className="text-[11px] text-rose-600">This examination attempt has been officially concluded.</p>
               </div>
             ) : restartStatus === 'pending' ? (
               <div className="flex items-center justify-center gap-2 font-bold text-amber-800 bg-amber-50 p-2.5 rounded-lg border border-amber-200">

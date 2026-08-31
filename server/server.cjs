@@ -430,6 +430,22 @@ app.get('/api/enrollments', (req, res) => {
     list = list.filter(e => e.teacherId === teacherId || teacherClasses.includes(e.classId));
   }
 
+  // Enrich enrollments with full parent class and section details
+  list = list.map(e => {
+    const parentClass = db.classes.find(c => c.id === e.classId);
+    const parentSection = db.sections.find(s => s.id === e.sectionId);
+    const teacherUser = db.users.find(u => u.id === (parentClass ? parentClass.teacher_id : e.teacherId));
+    const teacherName = parentClass?.teacher_name || teacherUser?.full_name || e.teacherName || 'Faculty Instructor';
+    return {
+      ...e,
+      className: e.className || parentClass?.name || 'Chemistry Class',
+      sectionName: e.sectionName || parentSection?.name || 'Section A',
+      teacherName: teacherName,
+      academicYear: parentClass?.academic_year || '2026-27',
+      classCode: parentClass?.code || 'CHEM'
+    };
+  });
+
   res.json({ success: true, enrollments: list });
 });
 
@@ -1366,9 +1382,33 @@ app.put('/api/requests/:id/action', (req, res) => {
   request.updatedAt = new Date().toISOString();
 
   // If approved and attemptId is linked, ensure attempt is unlocked for re-entry
-  if (status === 'APPROVED' && request.attemptId) {
+  if (request.attemptId) {
     const attempt = db.attempts.find(a => a.id === request.attemptId);
-    if (attempt && attempt.status === 'in_progress') {
+    if (attempt) {
+      if (status === 'APPROVED') {
+        attempt.status = 'in_progress';
+        attempt.restartPermission = {
+          attemptId: request.attemptId,
+          studentId: request.studentId,
+          studentName: request.studentName,
+          examId: request.examId,
+          reason: request.message,
+          status: 'granted',
+          grantedAt: new Date().toISOString(),
+          teacherNote: teacherResponse || 'Approved'
+        };
+      } else if (status === 'REJECTED') {
+        attempt.restartPermission = {
+          attemptId: request.attemptId,
+          studentId: request.studentId,
+          studentName: request.studentName,
+          examId: request.examId,
+          reason: request.message,
+          status: 'rejected',
+          grantedAt: new Date().toISOString(),
+          teacherNote: teacherResponse || 'Rejected'
+        };
+      }
       attempt.updated_at = new Date().toISOString();
     }
   }
