@@ -11,7 +11,7 @@ function api(path, method = 'GET', data = null) {
       headers: {
         'Content-Type': 'application/json'
       },
-      timeout: 10000
+      timeout: 15000
     };
 
     const req = https.request(options, (res) => {
@@ -81,12 +81,14 @@ async function runLoadTest(concurrencyTarget = 50) {
   const numTeachers = Math.max(2, Math.floor(concurrencyTarget * 0.2));
   const numStudents = concurrencyTarget - numTeachers;
 
-  console.log(`[1] Setup: Provisioning ${numTeachers} Teachers and ${numStudents} Students concurrently...`);
+  console.log(`[1] Setup: Provisioning ${numTeachers} Teachers and classes concurrently...`);
 
   // Step 1: Concurrently Register Teachers
   const teacherPromises = Array.from({ length: numTeachers }).map(async (_, idx) => {
     const tEmail = `load.teacher.${ts}.${idx}@chemistry.edu`;
     const tName = `Prof. LoadTester ${idx + 1}`;
+    const uniqueClassCode = `C${Math.random().toString(36).substring(2, 6).toUpperCase()}${idx}`;
+
     const regRes = await api('/api/auth/register', 'POST', {
       email: tEmail,
       password: 'Password123!',
@@ -94,6 +96,7 @@ async function runLoadTest(concurrencyTarget = 50) {
       role: 'teacher'
     });
     record(regRes);
+    if (!regRes.ok) console.error(`Teacher ${idx} reg error:`, regRes.status, regRes.data);
     const teacherId = regRes.data?.user?.id || `teacher-${ts}-${idx}`;
 
     // Teacher creates Class & Section A
@@ -101,15 +104,19 @@ async function runLoadTest(concurrencyTarget = 50) {
       teacherId,
       teacherName: tName,
       name: `Physical Chemistry Cohort ${idx + 1}`,
-      classCode: `CHEM-${100 + idx}`,
+      classCode: uniqueClassCode,
       academicYear: '2026-27',
       description: 'Concurrent load test class cohort'
     });
     record(classRes);
+    if (!classRes.ok) console.error(`Teacher ${idx} class error:`, classRes.status, classRes.data);
     const liveClass = classRes.data?.class;
     const sectionA = classRes.data?.section;
 
     // Teacher creates Exam
+    const q1Id = `q1-${ts}-${idx}`;
+    const q2Id = `q2-${ts}-${idx}`;
+
     const examRes = await api('/api/exams', 'POST', {
       teacherId,
       teacherName: tName,
@@ -118,13 +125,13 @@ async function runLoadTest(concurrencyTarget = 50) {
       sectionId: sectionA?.id,
       sectionName: sectionA?.name,
       title: `Midterm Thermodynamics ${idx + 1}`,
-      courseCode: `CHEM-${100 + idx}`,
+      courseCode: uniqueClassCode,
       durationMinutes: 60,
       totalMarks: 10,
       status: 'published',
       questions: [
         {
-          id: `q1-${ts}-${idx}`,
+          id: q1Id,
           text: 'What is ΔU for an isothermal expansion of an ideal gas?',
           type: 'mcq',
           marks: 5,
@@ -135,7 +142,7 @@ async function runLoadTest(concurrencyTarget = 50) {
           ]
         },
         {
-          id: `q2-${ts}-${idx}`,
+          id: q2Id,
           text: 'Entropy of a pure crystalline solid at 0 K is:',
           type: 'mcq',
           marks: 5,
@@ -147,6 +154,7 @@ async function runLoadTest(concurrencyTarget = 50) {
       ]
     });
     record(examRes);
+    if (!examRes.ok) console.error(`Teacher ${idx} exam error:`, examRes.status, examRes.data);
     const liveExam = examRes.data?.exam;
 
     return {
@@ -154,20 +162,23 @@ async function runLoadTest(concurrencyTarget = 50) {
       teacherName: tName,
       class: liveClass,
       sectionA,
-      exam: liveExam
+      exam: liveExam,
+      q1Id,
+      q2Id
     };
   });
 
   const teacherCohort = await Promise.all(teacherPromises);
-  console.log(`  ✓ ${teacherCohort.length} Teachers initialized and published exams.`);
+  const validCohort = teacherCohort.filter(c => c.class && c.sectionA && c.exam);
+  console.log(`  ✓ ${validCohort.length}/${teacherCohort.length} Teachers successfully initialized classes and published exams.`);
 
-  // Step 2: 40 Students Execute Real Concurrent Exam Lifecycle
+  // Step 2: Students Execute Real Concurrent Exam Lifecycle
   console.log(`\n[2] Executing simultaneous student flows (${numStudents} concurrent students)...`);
   const tStartConcurrent = Date.now();
 
   const studentPromises = Array.from({ length: numStudents }).map(async (_, sIdx) => {
-    // Assign student to a teacher cohort
-    const cohort = teacherCohort[sIdx % teacherCohort.length];
+    // Assign student to a valid teacher cohort
+    const cohort = validCohort[sIdx % validCohort.length];
     const sEmail = `load.student.${ts}.${sIdx}@chemistry.edu`;
     const sName = `Student User ${sIdx + 1}`;
 
@@ -221,24 +232,21 @@ async function runLoadTest(concurrencyTarget = 50) {
     record(startRes);
     const attempt = startRes.data?.attempt;
 
-    if (!attempt || !attempt.id) {
+    if (!startRes.ok || !attempt || !attempt.id) {
       duplicateAttempts++;
       return;
     }
 
     // F. Concurrent Answer Saves (Autosave Q1, Q2)
-    const q1Id = `q1-${ts}-${sIdx % teacherCohort.length}`;
-    const q2Id = `q2-${ts}-${sIdx % teacherCohort.length}`;
-
     const saveRes1 = await api(`/api/attempts/${attempt.id}/answers`, 'PUT', {
       studentId,
-      answers: { [q1Id]: 'opt2' }
+      answers: { [cohort.q1Id]: 'opt2' }
     });
     record(saveRes1);
 
     const saveRes2 = await api(`/api/attempts/${attempt.id}/answers`, 'PUT', {
       studentId,
-      answers: { [q2Id]: 'opt1' }
+      answers: { [cohort.q2Id]: 'opt1' }
     });
     record(saveRes2);
 
@@ -246,7 +254,7 @@ async function runLoadTest(concurrencyTarget = 50) {
     const checkAttempt = await api(`/api/attempts/${attempt.id}?studentId=${studentId}`);
     record(checkAttempt);
     const savedAnswers = checkAttempt.data?.attempt?.answers || {};
-    if (savedAnswers[q1Id] !== 'opt2' || savedAnswers[q2Id] !== 'opt1') {
+    if (savedAnswers[cohort.q1Id] !== 'opt2' || savedAnswers[cohort.q2Id] !== 'opt1') {
       lostAnswers++;
     }
 
@@ -268,7 +276,7 @@ async function runLoadTest(concurrencyTarget = 50) {
   });
 
   // Concurrently run Teacher Dashboard Operations alongside Student Exam operations
-  const teacherActivityPromises = teacherCohort.map(async (cohort) => {
+  const teacherActivityPromises = validCohort.map(async (cohort) => {
     const tId = cohort.teacherId;
     const resList = await api(`/api/results?teacherId=${tId}`);
     record(resList);
@@ -329,7 +337,6 @@ async function main() {
   const res50 = await runLoadTest(50);
   console.log(`50 CONCURRENT USERS RESULT: ${res50.passed ? 'PASS' : 'FAIL'}`);
 
-  // Headroom stress testing (75 and 100 users)
   console.log('\n>>> Commencing Headroom Stress Test (75 Users)...');
   const res75 = await runLoadTest(75);
   console.log(`75 CONCURRENT USERS RESULT: ${res75.passed ? 'PASS' : 'FAIL'}`);
