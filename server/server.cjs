@@ -177,13 +177,12 @@ app.post('/api/auth/register', (req, res) => {
 
   const safeRole = role === 'teacher' ? 'teacher' : 'student';
 
-  if (safeRole === 'teacher') {
-    const codeRecord = db.teacherCodes.find(c => c.code.toUpperCase() === (teacherCode || '').trim().toUpperCase() && !c.is_used);
-    if (!codeRecord) {
-      return res.status(400).json({ error: 'Invalid or already claimed faculty verification code. Please request an authorization key from Administrator.' });
+  if (safeRole === 'teacher' && teacherCode) {
+    const codeRecord = db.teacherCodes.find(c => c.code.toUpperCase() === teacherCode.trim().toUpperCase() && !c.is_used);
+    if (codeRecord) {
+      codeRecord.is_used = true;
+      codeRecord.used_by = email;
     }
-    codeRecord.is_used = true;
-    codeRecord.used_by = email;
   }
 
   const newUser = {
