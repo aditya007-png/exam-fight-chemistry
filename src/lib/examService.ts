@@ -32,9 +32,23 @@ export const saveStoredExams = (exams: ExamItem[]): void => {
   }
 };
 
-export const fetchExamsFromDB = async (teacherId?: string): Promise<ExamItem[]> => {
+export const fetchExamsFromDB = async (
+  filters?: { teacherId?: string; studentId?: string; studentEmail?: string } | string
+): Promise<ExamItem[]> => {
   try {
-    const res = await fetch(`/api/exams${teacherId ? `?teacherId=${teacherId}` : ''}`);
+    let url = '/api/exams';
+    if (typeof filters === 'string') {
+      url = `/api/exams?teacherId=${encodeURIComponent(filters)}`;
+    } else if (filters) {
+      const params = new URLSearchParams();
+      if (filters.teacherId) params.append('teacherId', filters.teacherId);
+      if (filters.studentId) params.append('studentId', filters.studentId);
+      if (filters.studentEmail) params.append('studentEmail', filters.studentEmail);
+      const qs = params.toString();
+      if (qs) url = `/api/exams?${qs}`;
+    }
+
+    const res = await fetch(url);
     if (res.ok) {
       const data = await res.json();
       if (data.success && Array.isArray(data.exams)) {
@@ -73,42 +87,6 @@ export const fetchExamsFromDB = async (teacherId?: string): Promise<ExamItem[]> 
     }
   } catch (err) {}
 
-  if (isSupabaseConfigured()) {
-    try {
-      let query = supabase.from('exams').select('*, profiles:teacher_id(full_name), classes:class_id(name, code)');
-      if (teacherId) {
-        query = query.eq('teacher_id', teacherId);
-      }
-      const { data, error } = await query;
-      if (!error && data) {
-        const mapped: ExamItem[] = data.map((d: any) => ({
-          id: d.id,
-          title: d.title,
-          topic: 'General Chemistry',
-          courseCode: d.classes?.code || 'CHEM-101',
-          courseName: `${d.classes?.code || 'CHEM-101'} — ${d.classes?.name || 'Class'}`,
-          teacherName: d.profiles?.full_name || 'Faculty Member',
-          teacherId: d.teacher_id,
-          classId: d.class_id,
-          className: d.classes?.name,
-          sectionId: `sec-${d.class_id}`,
-          sectionName: 'Section A',
-          durationMinutes: d.duration_minutes || 60,
-          totalQuestions: 10,
-          totalMarks: d.total_marks || 100,
-          passingMarks: d.passing_marks || 40,
-          status: d.status || 'active',
-          scheduledStart: d.scheduled_start || new Date().toISOString(),
-          scheduledEnd: d.scheduled_end || new Date(Date.now() + 3600000).toISOString(),
-          proctoringActive: true,
-        }));
-        saveStoredExams(mapped);
-        return mapped;
-      }
-    } catch (err) {
-      console.warn('DB fetchExams error:', err);
-    }
-  }
   return getStoredExams();
 };
 
@@ -145,17 +123,20 @@ export const getExamsForTeacher = (teacherId?: string): ExamItem[] => {
   return exams;
 };
 
-export const getExamsForStudent = (enrolledSectionIds: string[]): ExamItem[] => {
+export const getExamsForStudent = (enrolledSectionIds: string[], enrolledClassIds: string[] = []): ExamItem[] => {
   const exams = getStoredExams();
-  if (enrolledSectionIds.length === 0) {
-    return exams.filter((e) => !e.sectionId && !e.classId);
-  }
-  return exams.filter(
-    (e) =>
-      (!e.sectionId && !e.classId) ||
-      (e.sectionId && enrolledSectionIds.includes(e.sectionId)) ||
-      (e.classId && enrolledSectionIds.some((s) => s.includes(e.classId!)))
-  );
+  return exams.filter((e) => {
+    const isPublished = e.status === 'published' || e.status === 'active';
+    if (!isPublished) return false;
+
+    if (e.sectionId && e.sectionId !== 'all') {
+      return enrolledSectionIds.includes(e.sectionId);
+    }
+    if (e.classId) {
+      return enrolledClassIds.includes(e.classId) || enrolledSectionIds.some((s) => s.includes(e.classId!));
+    }
+    return false;
+  });
 };
 
 export const createOrUpdateExam = async (

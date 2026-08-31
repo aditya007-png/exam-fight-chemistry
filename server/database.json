@@ -97,6 +97,30 @@
   ],
   "classes": [
     {
+      "id": "cls-1788198683125-valf",
+      "name": "B.Tech IT — Inorganic Chemistry",
+      "code": "INORG-401",
+      "teacher_id": "teacher-b-1788198682816",
+      "teacher_name": "Dr. Sunita Rao",
+      "academic_year": "2026-27",
+      "subject": "Chemistry",
+      "description": "",
+      "created_at": "2026-08-31T17:51:23.125Z",
+      "updated_at": "2026-08-31T17:51:23.125Z"
+    },
+    {
+      "id": "cls-1788198683110-xujx",
+      "name": "B.Tech CSE — Organic Synthesis",
+      "code": "ORG-301",
+      "teacher_id": "teacher-a-1788198682816",
+      "teacher_name": "Prof. Alok Verma",
+      "academic_year": "2026-27",
+      "subject": "Chemistry",
+      "description": "",
+      "created_at": "2026-08-31T17:51:23.110Z",
+      "updated_at": "2026-08-31T17:51:23.111Z"
+    },
+    {
       "id": "cls-1788112233857-uhhh",
       "name": "B.Tech CSE - Advanced Chemistry",
       "code": "CSE-CHEM-601",
@@ -327,6 +351,24 @@
   ],
   "sections": [
     {
+      "id": "sec-cls-1788198683125-valf-a",
+      "class_id": "cls-1788198683125-valf",
+      "className": "B.Tech IT — Inorganic Chemistry",
+      "name": "Section A",
+      "enrollment_code": "INOR-AV65P",
+      "created_at": "2026-08-31T17:51:23.125Z",
+      "updated_at": "2026-08-31T17:51:23.125Z"
+    },
+    {
+      "id": "sec-cls-1788198683110-xujx-a",
+      "class_id": "cls-1788198683110-xujx",
+      "className": "B.Tech CSE — Organic Synthesis",
+      "name": "Section A",
+      "enrollment_code": "ORG--ATJ1I",
+      "created_at": "2026-08-31T17:51:23.112Z",
+      "updated_at": "2026-08-31T17:51:23.112Z"
+    },
+    {
       "id": "sec-cls-1788112233857-uhhh-a",
       "class_id": "cls-1788112233857-uhhh",
       "className": "B.Tech CSE - Advanced Chemistry",
@@ -544,6 +586,34 @@
     }
   ],
   "enrollments": [
+    {
+      "id": "enr-1788198683134-w1lt",
+      "studentId": "student-b-1788198682816",
+      "studentName": "Priya Sharma",
+      "studentEmail": "priya.1788198682816@chem.edu",
+      "classId": "cls-1788198683125-valf",
+      "className": "B.Tech IT — Inorganic Chemistry",
+      "sectionId": "sec-cls-1788198683125-valf-a",
+      "sectionName": "Section A",
+      "teacherId": "teacher-b-1788198682816",
+      "teacherName": "Dr. Sunita Rao",
+      "joinedAt": "2026-08-31T17:51:23.134Z",
+      "status": "active"
+    },
+    {
+      "id": "enr-1788198683130-jfvu",
+      "studentId": "student-a-1788198682816",
+      "studentName": "Aditya Kumar",
+      "studentEmail": "aditya.1788198682816@chem.edu",
+      "classId": "cls-1788198683110-xujx",
+      "className": "B.Tech CSE — Organic Synthesis",
+      "sectionId": "sec-cls-1788198683110-xujx-a",
+      "sectionName": "Section A",
+      "teacherId": "teacher-a-1788198682816",
+      "teacherName": "Prof. Alok Verma",
+      "joinedAt": "2026-08-31T17:51:23.130Z",
+      "status": "active"
+    },
     {
       "id": "enr-1788112233871-hhyd",
       "studentId": "user-1788112233863-xqzj",
@@ -952,6 +1022,100 @@
     }
   ],
   "exams": [
+    {
+      "id": "exam-1788198683161-8ae2",
+      "title": "Unpublished Midterm Draft",
+      "topic": "General Chemistry",
+      "courseCode": "ORG-301",
+      "courseName": "ORG-301 — B.Tech CSE — Organic Synthesis",
+      "teacherId": "teacher-a-1788198682816",
+      "teacherName": "Prof. Alok Verma",
+      "classId": "cls-1788198683110-xujx",
+      "className": "B.Tech CSE — Organic Synthesis",
+      "sectionId": "sec-cls-1788198683110-xujx-a",
+      "sectionName": "Section A",
+      "durationMinutes": 60,
+      "instructions": "Standard examination rules apply. Complete all questions before the timer expires.",
+      "totalQuestions": 0,
+      "totalMarks": 100,
+      "passingMarks": 40,
+      "status": "draft",
+      "questions": [],
+      "created_at": "2026-08-31T17:51:23.161Z",
+      "updated_at": "2026-08-31T17:51:23.161Z"
+    },
+    {
+      "id": "exam-1788198683142-7jgv",
+      "title": "Crystal Field Theory & Magnetic Moments",
+      "topic": "General Chemistry",
+      "courseCode": "INORG-401",
+      "courseName": "INORG-401 — B.Tech IT — Inorganic Chemistry",
+      "teacherId": "teacher-b-1788198682816",
+      "teacherName": "Dr. Sunita Rao",
+      "classId": "cls-1788198683125-valf",
+      "className": "B.Tech IT — Inorganic Chemistry",
+      "sectionId": "sec-cls-1788198683125-valf-a",
+      "sectionName": "Section A",
+      "durationMinutes": 50,
+      "instructions": "Standard examination rules apply. Complete all questions before the timer expires.",
+      "totalQuestions": 1,
+      "totalMarks": 1,
+      "passingMarks": 1,
+      "status": "published",
+      "questions": [
+        {
+          "id": "q2",
+          "text": "Calculate the CFSE for an octahedral d6 low-spin complex:",
+          "type": "mcq",
+          "marks": 1,
+          "options": [
+            {
+              "id": "opt2",
+              "text": "-2.4 Δo + 2P",
+              "isCorrect": true
+            }
+          ]
+        }
+      ],
+      "created_at": "2026-08-31T17:51:23.142Z",
+      "updated_at": "2026-08-31T17:51:23.142Z"
+    },
+    {
+      "id": "exam-1788198683139-6k3z",
+      "title": "Reaction Mechanisms & Stereochemistry",
+      "topic": "General Chemistry",
+      "courseCode": "ORG-301",
+      "courseName": "ORG-301 — B.Tech CSE — Organic Synthesis",
+      "teacherId": "teacher-a-1788198682816",
+      "teacherName": "Prof. Alok Verma",
+      "classId": "cls-1788198683110-xujx",
+      "className": "B.Tech CSE — Organic Synthesis",
+      "sectionId": "sec-cls-1788198683110-xujx-a",
+      "sectionName": "Section A",
+      "durationMinutes": 45,
+      "instructions": "Standard examination rules apply. Complete all questions before the timer expires.",
+      "totalQuestions": 1,
+      "totalMarks": 1,
+      "passingMarks": 1,
+      "status": "published",
+      "questions": [
+        {
+          "id": "q1",
+          "text": "Which reagent converts alkenes to diols via syn-addition?",
+          "type": "mcq",
+          "marks": 1,
+          "options": [
+            {
+              "id": "opt1",
+              "text": "OsO4 / NMO",
+              "isCorrect": true
+            }
+          ]
+        }
+      ],
+      "created_at": "2026-08-31T17:51:23.139Z",
+      "updated_at": "2026-08-31T17:51:23.139Z"
+    },
     {
       "id": "exam-1788112233879-al7y",
       "title": "Quantum & Physical Chemistry Quiz",

@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getExamsForStudent, fetchExamsFromDB } from '../../lib/examService';
-import { getStudentEnrolledSectionIds, fetchEnrollmentsFromDB } from '../../lib/classService';
+import { fetchExamsFromDB } from '../../lib/examService';
+import { fetchEnrollmentsFromDB } from '../../lib/classService';
 import { fetchStudentRequests } from '../../lib/requestService';
 import { ExamRequest } from '../../types/request';
 import { ExamItem } from '../../types/dashboard';
@@ -22,9 +22,8 @@ export const StudentExamsPage: React.FC = () => {
   const loadStudentExams = async () => {
     if (studentId || studentEmail) {
       await fetchEnrollmentsFromDB(studentId);
-      await fetchExamsFromDB();
-      const secIds = getStudentEnrolledSectionIds(studentId, studentEmail);
-      setExams(getExamsForStudent(secIds));
+      const studentExams = await fetchExamsFromDB({ studentId, studentEmail });
+      setExams(studentExams);
 
       const reqs = await fetchStudentRequests(studentId);
       setRequests(reqs);

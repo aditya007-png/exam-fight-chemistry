@@ -38,7 +38,7 @@ export interface DbTeacherVerificationCode {
   created_at: string;
 }
 
-export type ExamStatus = 'draft' | 'scheduled' | 'active' | 'completed' | 'archived';
+export type ExamStatus = 'draft' | 'scheduled' | 'active' | 'published' | 'completed' | 'archived';
 
 export interface DbExam {
   id: string;

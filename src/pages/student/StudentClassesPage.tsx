@@ -55,11 +55,13 @@ export const StudentClassesPage: React.FC = () => {
 
     if (studentId || studentEmail) {
       await fetchEnrollmentsFromDB(studentId);
-      await fetchExamsFromDB();
+      const studentExams = await fetchExamsFromDB({ studentId, studentEmail });
       list = getStudentEnrolledClasses(studentId, studentEmail);
       setEnrolledClasses(list);
+      setAllExams(studentExams);
+    } else {
+      setAllExams(getStoredExams());
     }
-    setAllExams(getStoredExams());
   };
 
   useEffect(() => {

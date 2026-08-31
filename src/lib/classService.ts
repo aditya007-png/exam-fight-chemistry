@@ -2,7 +2,7 @@
 // Real Database & REST API Service for Classes, Sections, and Student Enrollments
 import { supabase, isSupabaseConfigured } from './supabase';
 import { AcademicClass, AcademicSection, ClassEnrollment } from '../types/academic';
-import { getStoredUsers, getTeachers } from './userService';
+import { getStoredUsers } from './userService';
 
 const CLASSES_STORAGE_KEY = 'efc_academic_classes_v1';
 const SECTIONS_STORAGE_KEY = 'efc_academic_sections_v1';
@@ -27,14 +27,13 @@ export const resolveTeacherName = (teacherId?: string, fallbackName?: string): s
     ) {
       return fallbackName;
     }
-    const teachers = getTeachers();
-    if (teachers.length > 0 && teachers[0].full_name && teachers[0].full_name.trim() !== '') {
-      return teachers[0].full_name;
+    if (fallbackName && fallbackName.trim() !== '') {
+      return fallbackName;
     }
   } catch (err) {
     console.warn('resolveTeacherName error:', err);
   }
-  return fallbackName || 'Dr. Jatin Sharma';
+  return fallbackName || 'Faculty Instructor';
 };
 
 export const generateEnrollmentCode = (classCode: string, sectionName: string): string => {
@@ -601,46 +600,12 @@ export const joinClassByCode = async (
     cls = section ? getClassById(section.classId) : null;
   }
 
-  // 4. Dynamic Resolution for Academic Keys
+  // 4. If section or class not found
   if (!section || !cls) {
-    const parts = cleanCode.split('-');
-    const classPrefix = parts[0] || 'CHEM';
-    const secIndicator = parts.length > 1 && parts[1].length > 0 ? parts[1][0] : 'A';
-    const sectionName = `Section ${secIndicator.toUpperCase()}`;
-    const className = classPrefix === 'CHE' || classPrefix === 'CHEM' 
-      ? 'General Chemistry' 
-      : `Academic Class (${classPrefix})`;
-
-    const existingClass = getStoredClasses().find((c) => c.classCode.toUpperCase() === classPrefix);
-    if (existingClass) {
-      cls = existingClass;
-    } else {
-      cls = {
-        id: `cls-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        teacherId: 'teacher-001',
-        teacherName: 'Dr. Jatin Sharma',
-        name: className,
-        classCode: classPrefix,
-        academicYear: '2026-27',
-        description: 'Enrolled Academic Chemistry Course',
-        createdAt: new Date().toISOString(),
-      };
-      const allCls = getStoredClasses();
-      allCls.unshift(cls);
-      saveStoredClasses(allCls);
-    }
-
-    section = {
-      id: `sec-${cls.id}-${cleanCode.replace(/[^A-Z0-9]/g, '')}`,
-      classId: cls.id,
-      className: cls.name,
-      name: sectionName,
-      enrollmentCode: cleanCode,
-      createdAt: new Date().toISOString(),
+    return {
+      success: false,
+      error: 'Invalid section enrollment code. Please check the code provided by your instructor.',
     };
-    const allSec = getStoredSections();
-    allSec.unshift(section);
-    saveStoredSections(allSec);
   }
 
   // 5. Check Duplicate Enrollment

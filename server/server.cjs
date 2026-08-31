@@ -198,12 +198,17 @@ app.post('/api/classes', (req, res) => {
   const newClassId = `cls-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
   const cleanCode = classCode.trim().toUpperCase();
 
+  const teacherUser = db.users.find(u => u.id === teacherId);
+  const actualTeacherName = (teacherName && teacherName !== 'Faculty Instructor')
+    ? teacherName.trim()
+    : (teacherUser?.full_name || teacherName || 'Faculty Instructor');
+
   const newClass = {
     id: newClassId,
     name: name.trim(),
     code: cleanCode,
-    teacher_id: teacherId || 'teacher-001',
-    teacher_name: teacherName || 'Faculty Instructor',
+    teacher_id: teacherId || (teacherUser ? teacherUser.id : 'teacher-001'),
+    teacher_name: actualTeacherName,
     academic_year: academicYear || '2026-27',
     subject: 'Chemistry',
     description: description || '',
@@ -343,41 +348,9 @@ app.post('/api/classes/join', (req, res) => {
   }
 
   if (!section || !cls) {
-    const parts = cleanCode.split('-');
-    const classPrefix = parts[0] || 'CHEM';
-    const secIndicator = parts.length > 1 && parts[1].length > 0 ? parts[1][0] : 'A';
-    const sectionName = `Section ${secIndicator.toUpperCase()}`;
-    const className = classPrefix === 'CHE' || classPrefix === 'CHEM'
-      ? 'General Chemistry'
-      : `Academic Class (${classPrefix})`;
-
-    cls = db.classes.find(c => c.code.toUpperCase() === classPrefix);
-    if (!cls) {
-      cls = {
-        id: `cls-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        name: className,
-        code: classPrefix,
-        teacher_id: 'teacher-001',
-        teacher_name: 'Dr. Jatin Sharma',
-        academic_year: '2026-27',
-        subject: 'Chemistry',
-        description: 'Academic Chemistry Course',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      db.classes.push(cls);
-    }
-
-    section = {
-      id: `sec-${cls.id}-${cleanCode.replace(/[^A-Z0-9]/g, '')}`,
-      class_id: cls.id,
-      className: cls.name,
-      name: sectionName,
-      enrollment_code: cleanCode,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-    db.sections.push(section);
+    return res.status(404).json({
+      error: 'Invalid section enrollment code. Please check the code provided by your instructor.'
+    });
   }
 
   const existingEnrollment = db.enrollments.find(e =>
@@ -390,7 +363,7 @@ app.post('/api/classes/join', (req, res) => {
   }
 
   const teacherUser = db.users.find(u => u.id === cls.teacher_id);
-  const actualTeacherName = cls.teacher_name || teacherUser?.full_name || 'Dr. Jatin Sharma';
+  const actualTeacherName = cls.teacher_name || teacherUser?.full_name || 'Faculty Instructor';
 
   const newEnrollment = {
     id: `enr-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -488,7 +461,7 @@ app.get('/api/exams', (req, res) => {
       const isPublished = e.status === 'published' || e.status === 'active';
       if (!isPublished) return false;
 
-      if (e.sectionId) {
+      if (e.sectionId && e.sectionId !== 'all') {
         return enrolledSecIds.includes(e.sectionId);
       }
       if (e.classId) {
@@ -497,7 +470,22 @@ app.get('/api/exams', (req, res) => {
       return false;
     });
 
-    return res.json({ success: true, exams: list });
+    const studentSafeList = list.map(e => {
+      const sanitizedQuestions = (e.questions || []).map(q => ({
+        id: q.id,
+        text: q.text,
+        type: q.type || 'mcq',
+        marks: q.marks || 1,
+        negativeMarks: q.negativeMarks || 0,
+        options: (q.options || []).map(opt => ({ id: opt.id, text: opt.text }))
+      }));
+      return {
+        ...e,
+        questions: sanitizedQuestions
+      };
+    });
+
+    return res.json({ success: true, exams: studentSafeList });
   }
 
   if (sectionIds) {
