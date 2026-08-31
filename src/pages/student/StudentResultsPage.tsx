@@ -1,7 +1,7 @@
 // src/pages/student/StudentResultsPage.tsx
 // Student Examination Results with real persistent result records
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { fetchStudentResults } from '../../lib/resultService';
 import { ExamResult } from '../../types/result';
@@ -11,6 +11,7 @@ import { ShieldCheck, Calendar, ArrowRight, Award, Eye } from 'lucide-react';
 
 export const StudentResultsPage: React.FC = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const studentId = user?.id || '';
 
   const [results, setResults] = useState<ExamResult[]>([]);
@@ -25,7 +26,7 @@ export const StudentResultsPage: React.FC = () => {
 
   useEffect(() => {
     loadResults();
-  }, [studentId]);
+  }, [studentId, location.key]);
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto py-2">

@@ -21,7 +21,6 @@ import {
   fetchEnrollmentsFromDB,
   removeStudentFromSection,
 } from '../../lib/classService';
-import { fetchProfilesFromDB } from '../../lib/userService';
 import { Button } from '../../components/common/Button';
 import { Modal } from '../../components/common/Modal';
 import {
@@ -43,10 +42,11 @@ import {
   Mail,
   Calendar,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 export const TeacherClassesPage: React.FC = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const teacherId = user?.id || '';
   const teacherName = user?.full_name || 'Dr. Jatin Sharma';
 
@@ -77,8 +77,6 @@ export const TeacherClassesPage: React.FC = () => {
   const previousCountRef = useRef<number>(0);
 
   const loadData = async () => {
-    await fetchProfilesFromDB();
-
     let clsList = getStoredClasses(teacherId);
     if (clsList.length === 0) {
       clsList = getStoredClasses();
@@ -86,7 +84,10 @@ export const TeacherClassesPage: React.FC = () => {
     setClasses(clsList);
 
     if (teacherId) {
-      const dbClasses = await fetchClassesFromDB(teacherId);
+      const [dbClasses] = await Promise.all([
+        fetchClassesFromDB(teacherId),
+        fetchEnrollmentsFromDB(),
+      ]);
       if (dbClasses.length > 0) {
         clsList = dbClasses;
         setClasses(dbClasses);
@@ -105,7 +106,6 @@ export const TeacherClassesPage: React.FC = () => {
       if (!selectedSectionId && activeSecId) setSelectedSectionId(activeSecId);
 
       if (activeSecId) {
-        await fetchEnrollmentsFromDB();
         const enrList = getStoredEnrollments({ sectionId: activeSecId, teacherId });
         setEnrollments(enrList);
 
@@ -129,13 +129,13 @@ export const TeacherClassesPage: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, [teacherId, selectedClassId, selectedSectionId]);
+  }, [teacherId, selectedClassId, selectedSectionId, location.key]);
 
-  // Real-time Background Polling Every 3 Seconds
+  // Real-time Background Polling Every 5 Seconds
   useEffect(() => {
     const pollInterval = setInterval(() => {
       loadData();
-    }, 3000);
+    }, 5000);
 
     return () => clearInterval(pollInterval);
   }, [teacherId, selectedClassId, selectedSectionId]);

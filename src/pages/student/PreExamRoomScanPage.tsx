@@ -16,7 +16,7 @@ import {
   Lock,
 } from 'lucide-react';
 
-const MINIMUM_REQUIRED_DEGREES = 300;
+const MINIMUM_REQUIRED_DEGREES = 360;
 
 export const PreExamRoomScanPage: React.FC = () => {
   const { examId } = useParams<{ examId: string }>();
@@ -308,7 +308,7 @@ export const PreExamRoomScanPage: React.FC = () => {
   };
 
   const degreesRemaining = Math.max(0, MINIMUM_REQUIRED_DEGREES - totalCumulativeDegrees);
-  const is300ThresholdMet = totalCumulativeDegrees >= MINIMUM_REQUIRED_DEGREES;
+  const is360ThresholdMet = totalCumulativeDegrees >= MINIMUM_REQUIRED_DEGREES;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-center items-center p-4 sm:p-6 selection:bg-blue-500 selection:text-white">
@@ -323,7 +323,7 @@ export const PreExamRoomScanPage: React.FC = () => {
             360° Environmental Room-Scan
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 max-w-lg mx-auto">
-            Please complete the mandatory 360° environmental check. Rotate your camera in a circle around your room (minimum 300° required).
+            Please complete the mandatory 360° environmental check. Rotate your camera in a full circle around your room (360° required).
           </p>
         </div>
 
@@ -391,11 +391,11 @@ export const PreExamRoomScanPage: React.FC = () => {
 
                   {/* Reticle */}
                   <div className="self-center flex flex-col items-center justify-center">
-                    <Scan className={`w-14 h-14 ${is300ThresholdMet ? 'text-emerald-400' : 'text-amber-400 animate-pulse'}`} />
+                    <Scan className={`w-14 h-14 ${is360ThresholdMet ? 'text-emerald-400' : 'text-amber-400 animate-pulse'}`} />
                     <span className={`text-[11px] font-mono font-bold tracking-wider uppercase mt-1 px-2.5 py-0.5 rounded-full bg-slate-900/80 backdrop-blur border ${
-                      is300ThresholdMet ? 'text-emerald-400 border-emerald-500/50' : 'text-amber-300 border-amber-500/50'
+                      is360ThresholdMet ? 'text-emerald-400 border-emerald-500/50' : 'text-amber-300 border-amber-500/50'
                     }`}>
-                      {is300ThresholdMet ? '✓ 300° THRESHOLD CLEARED' : `LOCKED: ${degreesRemaining}° MORE REQUIRED`}
+                      {is360ThresholdMet ? '✓ 360° THRESHOLD CLEARED' : `LOCKED: ${degreesRemaining}° MORE REQUIRED`}
                     </span>
                   </div>
 
@@ -404,20 +404,19 @@ export const PreExamRoomScanPage: React.FC = () => {
                     <div className="flex justify-between text-[11px] font-mono font-bold text-white">
                       <span>
                         {isRecording
-                          ? is300ThresholdMet
-                            ? '✓ Minimum 300° Cleared! Complete full 360° or Finish'
+                          ? is360ThresholdMet
+                            ? '✓ Full 360° Cleared! Complete Scan'
                             : `Rotate Camera (${degreesRemaining}° remaining)`
-                          : 'Minimum 300° Rotation Required'}
+                          : 'Full 360° Rotation Required'}
                       </span>
-                      <span className={is300ThresholdMet ? 'text-emerald-400' : 'text-amber-400'}>
+                      <span className={is360ThresholdMet ? 'text-emerald-400' : 'text-amber-400'}>
                         {totalCumulativeDegrees}° / {MINIMUM_REQUIRED_DEGREES}° Min
                       </span>
                     </div>
                     <div className="w-full h-2.5 rounded-full bg-slate-800 overflow-hidden relative">
-                      <div className="absolute top-0 bottom-0 left-[83.33%] w-0.5 bg-white z-10 opacity-70" />
                       <div
                         className={`h-full transition-all duration-150 ${
-                          is300ThresholdMet ? 'bg-emerald-500' : 'bg-blue-500'
+                          is360ThresholdMet ? 'bg-emerald-500' : 'bg-blue-500'
                         }`}
                         style={{ width: `${Math.min(100, (totalCumulativeDegrees / 360) * 100)}%` }}
                       />
@@ -470,13 +469,13 @@ export const PreExamRoomScanPage: React.FC = () => {
                   </Button>
                 ) : (
                   <Button
-                    variant={is300ThresholdMet ? 'primary' : 'secondary'}
+                    variant={is360ThresholdMet ? 'primary' : 'secondary'}
                     size="md"
-                    disabled={!is300ThresholdMet}
+                    disabled={!is360ThresholdMet}
                     onClick={handleStopRecording}
-                    leftIcon={!is300ThresholdMet ? <Lock className="w-4 h-4 text-amber-500" /> : undefined}
+                    leftIcon={!is360ThresholdMet ? <Lock className="w-4 h-4 text-amber-500" /> : undefined}
                   >
-                    {is300ThresholdMet
+                    {is360ThresholdMet
                       ? `Finish & Auto-Save (${totalCumulativeDegrees}° Cleared)`
                       : `Locked: Rotate ${degreesRemaining}° More to Proceed`}
                   </Button>

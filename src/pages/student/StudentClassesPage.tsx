@@ -1,6 +1,7 @@
 // src/pages/student/StudentClassesPage.tsx
 // Student Class Enrollment and Cohort Directory with Join Class modal
 import React, { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   AcademicClass,
@@ -28,10 +29,10 @@ import {
   ShieldCheck,
   KeyRound,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 
 export const StudentClassesPage: React.FC = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const studentId = user?.id || '';
   const studentName = user?.full_name || 'Aditya Student';
   const studentEmail = user?.email || '';
@@ -54,8 +55,10 @@ export const StudentClassesPage: React.FC = () => {
     setEnrolledClasses(list);
 
     if (studentId || studentEmail) {
-      await fetchEnrollmentsFromDB(studentId);
-      const studentExams = await fetchExamsFromDB({ studentId, studentEmail });
+      const [, studentExams] = await Promise.all([
+        fetchEnrollmentsFromDB(studentId),
+        fetchExamsFromDB({ studentId, studentEmail }),
+      ]);
       list = getStudentEnrolledClasses(studentId, studentEmail);
       setEnrolledClasses(list);
       setAllExams(studentExams);
@@ -66,7 +69,7 @@ export const StudentClassesPage: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, [studentId, studentEmail]);
+  }, [studentId, studentEmail, location.key]);
 
   const handleJoinClass = async (e: React.FormEvent) => {
     e.preventDefault();

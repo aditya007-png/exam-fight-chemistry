@@ -242,10 +242,10 @@ export const RoomScanExperience: React.FC<RoomScanExperienceProps> = ({
     return () => clearInterval(timer);
   }, [isRecording]);
 
-  // Check if minimum 300° is reached
+  // Check if full 360° is reached
   useEffect(() => {
-    if (scanDegrees >= 300 && isRecording) {
-      if (scanDegrees >= 318 || scanSeconds >= 24) {
+    if (scanDegrees >= 360 && isRecording) {
+      if (scanSeconds >= 20) {
         handleStopAndVerifyScan();
       }
     }
@@ -274,6 +274,7 @@ export const RoomScanExperience: React.FC<RoomScanExperienceProps> = ({
   };
 
   const handleStopAndVerifyScan = () => {
+    if (scanDegrees < 360) return;
     setIsRecording(false);
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
@@ -286,7 +287,7 @@ export const RoomScanExperience: React.FC<RoomScanExperienceProps> = ({
     const videoBlob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
 
     await onCompleteAndStartExam({
-      coverageDegrees: Math.max(300, scanDegrees),
+      coverageDegrees: Math.max(360, scanDegrees),
       durationSeconds: Math.max(15, scanSeconds),
       videoBlob: videoBlob.size > 0 ? videoBlob : new Blob(['room-scan-data'], { type: 'video/webm' }),
     });
@@ -298,7 +299,7 @@ export const RoomScanExperience: React.FC<RoomScanExperienceProps> = ({
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  const progressPercent = Math.min(100, Math.round((scanDegrees / 300) * 100));
+  const progressPercent = Math.min(100, Math.round((scanDegrees / 360) * 100));
   const hudRadius = 68;
   const hudCircumference = 2 * Math.PI * hudRadius;
   const hudDashoffset = hudCircumference - (Math.min(360, scanDegrees) / 360) * hudCircumference;
@@ -396,7 +397,7 @@ export const RoomScanExperience: React.FC<RoomScanExperienceProps> = ({
 
             <div className="px-2.5 py-1 rounded-lg bg-slate-900/80 backdrop-blur-md text-[10px] font-bold font-mono text-cyan-300 border border-cyan-500/40 flex items-center gap-1.5">
               <Radar className={`w-3.5 h-3.5 ${isRecording ? 'animate-spin' : ''}`} />
-              <span>AZIMUTH: {scanDegrees}° / 300°</span>
+              <span>AZIMUTH: {scanDegrees}° / 360°</span>
             </div>
           </div>
 
@@ -421,14 +422,14 @@ export const RoomScanExperience: React.FC<RoomScanExperienceProps> = ({
                   fill="transparent"
                 />
 
-                {/* 300° Target Marker tick */}
+                {/* 360° Target Marker tick */}
                 <circle
                   cx="80"
                   cy="80"
                   r={hudRadius}
                   className="text-blue-500/30"
                   strokeWidth="8"
-                  strokeDasharray={`${(300 / 360) * hudCircumference} ${hudCircumference}`}
+                  strokeDasharray={`${hudCircumference} ${hudCircumference}`}
                   stroke="currentColor"
                   fill="transparent"
                 />
@@ -439,7 +440,7 @@ export const RoomScanExperience: React.FC<RoomScanExperienceProps> = ({
                   cy="80"
                   r={hudRadius}
                   className={`${
-                    scanDegrees >= 300 ? 'text-emerald-400' : 'text-cyan-400'
+                    scanDegrees >= 360 ? 'text-emerald-400' : 'text-cyan-400'
                   } transition-all duration-300 drop-shadow-[0_0_8px_rgba(34,211,238,0.6)]`}
                   strokeWidth="6"
                   strokeDasharray={hudCircumference}
@@ -456,7 +457,7 @@ export const RoomScanExperience: React.FC<RoomScanExperienceProps> = ({
                   {scanDegrees}°
                 </span>
                 <span className="text-[9px] font-black uppercase tracking-widest text-cyan-300 font-mono">
-                  {scanDegrees >= 300 ? '✓ 300° PASSED' : 'TARGET: 300°'}
+                  {scanDegrees >= 360 ? '✓ 360° PASSED' : 'TARGET: 360°'}
                 </span>
                 <span className="text-[8px] text-slate-400 mt-0.5 font-mono">
                   {isRecording ? 'ROTATING...' : 'READY'}
@@ -484,7 +485,7 @@ export const RoomScanExperience: React.FC<RoomScanExperienceProps> = ({
               <span>CAMERA INTERRUPTED — SCAN RESET TO 0°</span>
             </div>
             <p className="text-xs text-rose-800 leading-relaxed font-medium">
-              Your camera became unavailable during the room scan. The room scan has been invalidated and must be completed again from the beginning (0° / 300°).
+              Your camera became unavailable during the room scan. The room scan has been invalidated and must be completed again from the beginning (0° / 360°).
             </p>
             <div className="text-[11px] text-slate-600 pt-1 flex items-center gap-1 font-semibold">
               {isCameraHealthy ? (
@@ -513,15 +514,15 @@ export const RoomScanExperience: React.FC<RoomScanExperienceProps> = ({
                   Room Perimeter Coverage:
                 </span>
                 <span className="text-sm font-black font-mono text-blue-700">
-                  {scanDegrees}° / 300° ({progressPercent}%)
+                  {scanDegrees}° / 360° ({progressPercent}%)
                 </span>
               </div>
               <p className="text-xs text-slate-500">
                 {isRecording
-                  ? 'Keep turning your camera around the room until 300° is reached.'
+                  ? 'Keep turning your camera around the room until full 360° is reached.'
                   : cameraInterrupted.isInterrupted
                   ? 'Click Start Room Scan Again to perform a fresh scan.'
-                  : 'Click the button to begin your 300° rotational environment scan.'}
+                  : 'Click the button to begin your 360° rotational environment scan.'}
               </p>
             </div>
 
@@ -540,13 +541,13 @@ export const RoomScanExperience: React.FC<RoomScanExperienceProps> = ({
                 </Button>
               ) : (
                 <Button
-                  variant={scanDegrees >= 300 ? 'primary' : 'secondary'}
+                  variant={scanDegrees >= 360 ? 'primary' : 'secondary'}
                   size="lg"
                   className="w-full sm:w-auto font-black text-xs tracking-wider uppercase px-6"
                   onClick={handleStopAndVerifyScan}
-                  disabled={scanDegrees < 300}
+                  disabled={scanDegrees < 360}
                 >
-                  {scanDegrees >= 300 ? 'Complete Scan (300°+)' : `Rotating (${scanDegrees}° / 300°)`}
+                  {scanDegrees >= 360 ? 'Complete Scan (360°)' : `Rotating (${scanDegrees}° / 360°)`}
                 </Button>
               )}
             </div>

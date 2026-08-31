@@ -18,10 +18,11 @@ import {
   Eye,
   ShieldCheck,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 export const TeacherRequestsPage: React.FC = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const teacherId = user?.id || '';
 
   const [requests, setRequests] = useState<ExamRequest[]>([]);
@@ -54,13 +55,13 @@ export const TeacherRequestsPage: React.FC = () => {
 
   useEffect(() => {
     loadRequests();
-  }, [teacherId]);
+  }, [teacherId, location.key]);
 
-  // Real-time Background Polling Every 3 Seconds
+  // Real-time Background Polling Every 5 Seconds
   useEffect(() => {
     const interval = setInterval(() => {
       loadRequests();
-    }, 3000);
+    }, 5000);
     return () => clearInterval(interval);
   }, [teacherId]);
 

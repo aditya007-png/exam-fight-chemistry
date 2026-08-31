@@ -1,26 +1,39 @@
-// src/pages/teacher/TeacherExamsPage.tsx
-// Teacher Examinations Management with real persistent exam records
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { getStoredExams, deleteExam } from '../../lib/examService';
+import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { getStoredExams, deleteExam, fetchExamsFromDB } from '../../lib/examService';
 import { ExamItem } from '../../types/dashboard';
 import { Button } from '../../components/common/Button';
 import { Plus, ShieldCheck, Clock, Users, Calendar, Trash2, FileText } from 'lucide-react';
 
 export const TeacherExamsPage: React.FC = () => {
+  const { user } = useAuth();
+  const location = useLocation();
+  const teacherId = user?.id || '';
   const [exams, setExams] = useState<ExamItem[]>([]);
 
-  const loadExams = () => {
-    setExams(getStoredExams());
+  const loadExams = async () => {
+    let list = getStoredExams();
+    if (teacherId) {
+      list = list.filter((e) => !e.teacherId || e.teacherId === teacherId);
+    }
+    setExams(list);
+
+    if (teacherId) {
+      const dbExams = await fetchExamsFromDB({ teacherId });
+      if (dbExams.length > 0) {
+        setExams(dbExams);
+      }
+    }
   };
 
   useEffect(() => {
     loadExams();
-  }, []);
+  }, [teacherId, location.key]);
 
-  const handleDelete = (examId: string, title: string) => {
+  const handleDelete = async (examId: string, title: string) => {
     if (window.confirm(`Are you sure you want to delete examination "${title}"?`)) {
-      deleteExam(examId);
+      await deleteExam(examId);
       loadExams();
     }
   };

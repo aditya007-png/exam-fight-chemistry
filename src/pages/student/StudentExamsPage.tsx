@@ -1,7 +1,7 @@
 // src/pages/student/StudentExamsPage.tsx
 // Student Assigned Exams Directory with Request Status & Re-entry Locking
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { fetchExamsFromDB } from '../../lib/examService';
 import { fetchEnrollmentsFromDB } from '../../lib/classService';
@@ -13,6 +13,7 @@ import { FileText, Clock, Calendar, ShieldCheck, ArrowRight, Lock, CheckCircle2,
 
 export const StudentExamsPage: React.FC = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const studentId = user?.id || '';
   const studentEmail = user?.email || '';
 
@@ -21,11 +22,12 @@ export const StudentExamsPage: React.FC = () => {
 
   const loadStudentExams = async () => {
     if (studentId || studentEmail) {
-      await fetchEnrollmentsFromDB(studentId);
-      const studentExams = await fetchExamsFromDB({ studentId, studentEmail });
+      const [, studentExams, reqs] = await Promise.all([
+        fetchEnrollmentsFromDB(studentId),
+        fetchExamsFromDB({ studentId, studentEmail }),
+        fetchStudentRequests(studentId),
+      ]);
       setExams(studentExams);
-
-      const reqs = await fetchStudentRequests(studentId);
       setRequests(reqs);
     } else {
       setExams([]);
@@ -35,7 +37,7 @@ export const StudentExamsPage: React.FC = () => {
 
   useEffect(() => {
     loadStudentExams();
-  }, [studentId, studentEmail]);
+  }, [studentId, studentEmail, location.key]);
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto py-2">

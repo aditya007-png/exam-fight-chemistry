@@ -34,10 +34,13 @@ export const TeacherDashboard: React.FC = () => {
 
   const loadTeacherDashboard = async () => {
     if (teacherId) {
-      await fetchClassesFromDB(teacherId);
-      await fetchEnrollmentsFromDB();
-      await fetchExamsFromDB(teacherId);
-      await fetchAttemptsFromDB();
+      const [, , , , reqs] = await Promise.all([
+        fetchClassesFromDB(teacherId),
+        fetchEnrollmentsFromDB(),
+        fetchExamsFromDB({ teacherId }),
+        fetchAttemptsFromDB(),
+        fetchTeacherRequests(teacherId),
+      ]);
 
       setExams(getStoredExams().filter((e) => !e.teacherId || e.teacherId === teacherId));
       setAttempts(getAllStoredAttempts());
@@ -45,15 +48,13 @@ export const TeacherDashboard: React.FC = () => {
       setClasses(clsList);
       const enrList = getStoredEnrollments({ teacherId });
       setEnrolledStudentsCount(enrList.length);
-
-      const reqs = await fetchTeacherRequests(teacherId);
       setRequests(reqs);
     }
   };
 
   useEffect(() => {
     loadTeacherDashboard();
-    const interval = setInterval(loadTeacherDashboard, 3000);
+    const interval = setInterval(loadTeacherDashboard, 5000);
     return () => clearInterval(interval);
   }, [teacherId]);
 

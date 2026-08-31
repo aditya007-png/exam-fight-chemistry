@@ -1,6 +1,7 @@
 // src/pages/student/StudentRequestsPage.tsx
 // Student Requests Directory and Issue Submission Modal (e.g. Exam Exited Accidentally)
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { ExamRequest, RequestType, RequestStatus } from '../../types/request';
 import { fetchStudentRequests, createStudentRequest } from '../../lib/requestService';
@@ -24,6 +25,7 @@ import {
 
 export const StudentRequestsPage: React.FC = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const studentId = user?.id || '';
   const studentName = user?.full_name || 'Student Candidate';
   const studentEmail = user?.email || '';
@@ -43,10 +45,11 @@ export const StudentRequestsPage: React.FC = () => {
 
   const loadData = async () => {
     if (!studentId && !studentEmail) return;
-    await fetchEnrollmentsFromDB(studentId);
-    await fetchExamsFromDB();
-
-    const myRequests = await fetchStudentRequests(studentId);
+    const [, , myRequests] = await Promise.all([
+      fetchEnrollmentsFromDB(studentId),
+      fetchExamsFromDB({ studentId, studentEmail }),
+      fetchStudentRequests(studentId),
+    ]);
     setRequests(myRequests);
 
     const enrolled = getStudentEnrolledClasses(studentId, studentEmail);
@@ -62,7 +65,7 @@ export const StudentRequestsPage: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, [studentId, studentEmail]);
+  }, [studentId, studentEmail, location.key]);
 
   const handleSubmitRequest = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,7 +1,5 @@
-// src/pages/teacher/TeacherResultsPage.tsx
-// Teacher Examination Results, Marks Ledger & Question-Wise Review
 import React, { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { fetchTeacherResults } from '../../lib/resultService';
 import { fetchExamsFromDB, getStoredExams } from '../../lib/examService';
@@ -23,6 +21,7 @@ import {
 
 export const TeacherResultsPage: React.FC = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const teacherId = user?.id || '';
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -44,17 +43,18 @@ export const TeacherResultsPage: React.FC = () => {
 
   const loadData = async () => {
     if (teacherId) {
-      await fetchExamsFromDB(teacherId);
-      await fetchClassesFromDB(teacherId);
+      const [, , resList] = await Promise.all([
+        fetchExamsFromDB({ teacherId }),
+        fetchClassesFromDB(teacherId),
+        fetchTeacherResults({
+          teacherId,
+          examId: selectedExamId,
+          classId: selectedClassId,
+          sectionId: selectedSectionId,
+        }),
+      ]);
       setExams(getStoredExams().filter((e) => !e.teacherId || e.teacherId === teacherId));
       setClasses(getStoredClasses(teacherId));
-
-      const resList = await fetchTeacherResults({
-        teacherId,
-        examId: selectedExamId,
-        classId: selectedClassId,
-        sectionId: selectedSectionId,
-      });
       setResults(resList);
     }
     setIsLoading(false);
@@ -62,9 +62,9 @@ export const TeacherResultsPage: React.FC = () => {
 
   useEffect(() => {
     loadData();
-    const interval = setInterval(loadData, 3000);
+    const interval = setInterval(loadData, 5000);
     return () => clearInterval(interval);
-  }, [teacherId, selectedExamId, selectedClassId, selectedSectionId]);
+  }, [teacherId, selectedExamId, selectedClassId, selectedSectionId, location.key]);
 
   const handleExamChange = (examId: string) => {
     setSelectedExamId(examId);

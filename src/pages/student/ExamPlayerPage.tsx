@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useProctoring } from '../../hooks/useProctoring';
@@ -9,11 +9,13 @@ import { ChemistryCalculator } from '../../components/exam/ChemistryCalculator';
 import { ProctoringCornerWidget } from '../../components/exam/ProctoringCornerWidget';
 import { ProctoringCheckScreen } from '../../components/exam/ProctoringCheckScreen';
 import { RoomScanExperience } from '../../components/exam/RoomScanExperience';
+import { ExamErrorBoundary } from '../../components/exam/ExamErrorBoundary';
 import { Button } from '../../components/common/Button';
 
 import {
   getExamById,
   getExamQuestions,
+  fetchExamsFromDB,
   createOrUpdateAttempt,
   saveAttemptEvidence,
 } from '../../lib/examService';
@@ -25,18 +27,20 @@ import {
 } from '../../lib/evidenceService';
 import { createStudentRequest } from '../../lib/requestService';
 import { ExamQuestion, StudentAnswerState } from '../../types/exam';
+import { ExamItem } from '../../types/dashboard';
 import {
   Clock,
   FileText,
   CheckCircle2,
   ArrowRight,
-  XCircle,
   ShieldCheck,
   ShieldAlert,
-  Lock,
   Send,
   Loader2,
   RotateCcw,
+  AlertTriangle,
+  Home,
+  RefreshCw,
 } from 'lucide-react';
 
 type ExamStep =
@@ -48,15 +52,21 @@ type ExamStep =
   | 'terminated_proctoring'
   | 'terminated_tab_switch';
 
-export const ExamPlayerPage: React.FC = () => {
+const InnerExamPlayer: React.FC = () => {
   const { examId } = useParams<{ examId: string }>();
   const { user } = useAuth();
 
   const activeExamId = examId || '';
-  const storedExam = getExamById(activeExamId);
-  const storedQuestions = getExamQuestions(activeExamId);
 
-  const questions: ExamQuestion[] = storedQuestions as any;
+  // Exam & Questions State
+  const [exam, setExam] = useState<ExamItem | null>(null);
+  const [questions, setQuestions] = useState<ExamQuestion[]>([]);
+  const [isLoadingExam, setIsLoadingExam] = useState<boolean>(true);
+  const [examLoadError, setExamLoadError] = useState<string | null>(null);
+
+  // Attempt State
+  const attemptIdRef = useRef<string>(`att-${user?.id || 'stu'}-${Date.now().toString(36)}`);
+  const [attemptInitialized, setAttemptInitialized] = useState<boolean>(false);
 
   // Current Step in Student Flow
   const [currentStep, setCurrentStep] = useState<ExamStep>('instructions');
@@ -74,9 +84,115 @@ export const ExamPlayerPage: React.FC = () => {
 
   // Question & Answers State
   const [currentIndex, setCurrentIndex] = useState<number>(0);
-  const [remainingSeconds, setRemainingSeconds] = useState<number>(3600); // 60 minutes
+  const [remainingSeconds, setRemainingSeconds] = useState<number>(3600);
   const [isCalculatorOpen, setIsCalculatorOpen] = useState<boolean>(false);
   const [submissionResult, setSubmissionResult] = useState<any>(null);
+  const [answers, setAnswers] = useState<Record<string, StudentAnswerState>>({});
+
+  // 1. Fetch & Initialize Exam & Questions safely
+  const loadExam = useCallback(async () => {
+    if (!activeExamId) {
+      setExamLoadError('Invalid examination ID provided.');
+      setIsLoadingExam(false);
+      return;
+    }
+
+    setIsLoadingExam(true);
+    setExamLoadError(null);
+
+    try {
+      // Check cached store
+      let currentEx = getExamById(activeExamId);
+      let currentQs = getExamQuestions(activeExamId);
+
+      // Fetch fresh from backend API
+      if (!currentEx || currentQs.length === 0) {
+        try {
+          const res = await fetch(`/api/exams/${activeExamId}${user?.id ? `?studentId=${user.id}` : ''}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.exam) {
+              currentEx = {
+                id: data.exam.id,
+                title: data.exam.title,
+                topic: data.exam.topic || 'General Chemistry',
+                courseCode: data.exam.courseCode || 'CHEM-101',
+                courseName: data.exam.courseName || `${data.exam.courseCode || 'CHEM-101'} — Chemistry`,
+                teacherName: data.exam.teacherName || 'Faculty Instructor',
+                teacherId: data.exam.teacherId,
+                classId: data.exam.classId,
+                className: data.exam.className,
+                sectionId: data.exam.sectionId,
+                sectionName: data.exam.sectionName,
+                durationMinutes: data.exam.durationMinutes || 60,
+                totalQuestions: data.exam.questions ? data.exam.questions.length : 10,
+                totalMarks: data.exam.totalMarks || 100,
+                passingMarks: data.exam.passingMarks || 40,
+                status: data.exam.status || 'active',
+                scheduledStart: data.exam.scheduledStart || new Date().toISOString(),
+                scheduledEnd: data.exam.scheduledEnd || new Date(Date.now() + 3600000).toISOString(),
+              };
+
+              if (Array.isArray(data.exam.questions) && data.exam.questions.length > 0) {
+                currentQs = data.exam.questions;
+              }
+            }
+          }
+        } catch (apiErr) {
+          console.warn('Direct exam fetch error:', apiErr);
+        }
+      }
+
+      // If still not resolved, query user's assigned exams
+      if (!currentEx) {
+        const studentExams = await fetchExamsFromDB(
+          user ? { studentId: user.id, studentEmail: user.email } : undefined
+        );
+        const matched = studentExams.find((e) => e.id === activeExamId);
+        if (matched) {
+          currentEx = matched;
+          currentQs = getExamQuestions(activeExamId);
+        }
+      }
+
+      if (!currentEx) {
+        setExamLoadError(
+          'This examination could not be loaded. Please verify that it is published and assigned to your section.'
+        );
+        setIsLoadingExam(false);
+        return;
+      }
+
+      setExam(currentEx);
+      const safeQuestions: ExamQuestion[] = (currentQs as any) || [];
+      setQuestions(safeQuestions);
+      setRemainingSeconds((currentEx.durationMinutes || 60) * 60);
+
+      // Initialize answers dictionary
+      const init: Record<string, StudentAnswerState> = {};
+      safeQuestions.forEach((q, idx) => {
+        init[q.id] = {
+          questionId: q.id,
+          selectedOptionIds: [],
+          numericalAnswer: '',
+          mechanismText: '',
+          isMarkedForReview: false,
+          timeSpentSeconds: 0,
+          isVisited: idx === 0,
+        };
+      });
+      setAnswers(init);
+    } catch (err: any) {
+      console.error('Fatal loadExam error:', err);
+      setExamLoadError(err?.message || 'An unexpected error occurred while loading examination data.');
+    } finally {
+      setIsLoadingExam(false);
+    }
+  }, [activeExamId, user?.id, user?.email]);
+
+  useEffect(() => {
+    loadExam();
+  }, [loadExam]);
 
   // Strict Termination Handler
   const handleAutomaticExamTermination = (reason: string, violationType: string) => {
@@ -84,7 +200,7 @@ export const ExamPlayerPage: React.FC = () => {
 
     const now = new Date();
     const formattedTime = now.toLocaleTimeString();
-    const attemptId = `att-${user?.id || 'std'}-${Date.now().toString().slice(-4)}`;
+    const attemptId = attemptIdRef.current;
 
     setTerminationInfo({
       reason,
@@ -113,31 +229,15 @@ export const ExamPlayerPage: React.FC = () => {
     },
   });
 
-  const [answers, setAnswers] = useState<Record<string, StudentAnswerState>>(() => {
-    const init: Record<string, StudentAnswerState> = {};
-    questions.forEach((q, idx) => {
-      init[q.id] = {
-        questionId: q.id,
-        selectedOptionIds: [],
-        numericalAnswer: '',
-        mechanismText: '',
-        isMarkedForReview: false,
-        timeSpentSeconds: 0,
-        isVisited: idx === 0,
-      };
-    });
-    return init;
-  });
-
-  // Automated Seamless Exam Start Handler after 300° Room Scan Confirmation
+  // Automated Seamless Exam Start Handler after 360° Room Scan Confirmation
   const handleCompleteScanAndStartExam = async (data: {
     coverageDegrees: number;
     durationSeconds: number;
     videoBlob: Blob;
   }) => {
-    const attemptId = `att-${user?.id || 'std'}-${Date.now().toString().slice(-4)}`;
+    const attemptId = attemptIdRef.current;
 
-    // 1. Upload room scan evidence with coverage degrees
+    // 1. Upload room scan evidence with 360° coverage degrees
     await uploadRoomScanVideo({
       examId: activeExamId,
       attemptId,
@@ -148,13 +248,37 @@ export const ExamPlayerPage: React.FC = () => {
       coverageDegrees: data.coverageDegrees,
     });
 
-    // 2. Automatically enter browser full-screen mode
+    // 2. Initialize real attempt in backend database
+    if (!attemptInitialized && exam) {
+      try {
+        await fetch('/api/attempts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: attemptId,
+            examId: activeExamId,
+            studentId: user?.id || 'stu-001',
+            studentName: user?.full_name || 'Student Candidate',
+            studentEmail: user?.email || '',
+            sectionId: exam.sectionId || '',
+            classId: exam.classId || '',
+            status: 'in_progress',
+            startTime: new Date().toISOString(),
+          }),
+        });
+        setAttemptInitialized(true);
+      } catch (err) {
+        console.warn('Attempt initialization fallback:', err);
+      }
+    }
+
+    // 3. Automatically enter browser full-screen mode
     await proctoring.enterFullscreen();
 
-    // 3. Directly start the live examination without any intermediate modal
+    // 4. Directly start live examination
     setCurrentStep('in_exam');
     proctoring.logEvent('FULLSCREEN_ENTER', 'info', 'Candidate entered fullscreen examination environment.');
-    proctoring.logEvent('EXAM_STARTED', 'info', `Examination started automatically after ${data.coverageDegrees}° room scan.`);
+    proctoring.logEvent('EXAM_STARTED', 'info', `Examination started automatically after ${data.coverageDegrees}° 360-degree room scan.`);
   };
 
   // In-Exam Countdown Timer
@@ -193,6 +317,10 @@ export const ExamPlayerPage: React.FC = () => {
   // Student requests teacher permission to restart
   const handleRequestRestartFromTeacher = async () => {
     if (!terminationInfo) return;
+    setIsRequestingRestart(true);
+
+    const messageText = studentNote.trim() || terminationInfo.reason || 'Exam exited unexpectedly. Requesting permission to resume examination.';
+
     await createStudentRequest({
       studentId: user?.id || 'stu-001',
       studentName: user?.full_name || 'Candidate',
@@ -200,7 +328,7 @@ export const ExamPlayerPage: React.FC = () => {
       examId: activeExamId,
       attemptId: terminationInfo.attemptId,
       requestType: 'EXAM_EXITED',
-      message: studentNote.trim() || terminationInfo.reason || 'Exam exited unexpectedly. Requesting permission to resume examination.',
+      message: messageText,
     });
 
     await requestExamRestart({
@@ -209,7 +337,7 @@ export const ExamPlayerPage: React.FC = () => {
       studentName: user?.full_name || 'Candidate',
       studentEmail: user?.email || 'student@chem.edu',
       examId: activeExamId,
-      examTitle: storedExam?.title || 'Chemistry Examination',
+      examTitle: exam?.title || 'Chemistry Examination',
       violationReason: terminationInfo.reason || 'Tab Switch Violation',
       studentNote: studentNote.trim() || undefined,
     });
@@ -222,7 +350,6 @@ export const ExamPlayerPage: React.FC = () => {
 
   // Fresh Exam Attempt Reset after Teacher Permission Granted
   const handleStartFreshExam = () => {
-    // Reset answers
     const freshAnswers: Record<string, StudentAnswerState> = {};
     questions.forEach((q, idx) => {
       freshAnswers[q.id] = {
@@ -237,7 +364,7 @@ export const ExamPlayerPage: React.FC = () => {
     });
     setAnswers(freshAnswers);
     setCurrentIndex(0);
-    setRemainingSeconds(3600);
+    setRemainingSeconds((exam?.durationMinutes || 60) * 60);
     setRestartStatus('none');
     setTerminationInfo(null);
     setCurrentStep('instructions');
@@ -253,7 +380,9 @@ export const ExamPlayerPage: React.FC = () => {
     let incorrectCount = 0;
     let unattemptedCount = 0;
 
-    questions.forEach((q) => {
+    const currentQuestions = questions.length > 0 ? questions : [];
+
+    currentQuestions.forEach((q) => {
       maxScore += q.marks;
       const ans = answers[q.id];
 
@@ -292,61 +421,62 @@ export const ExamPlayerPage: React.FC = () => {
     });
 
     const finalScore = Math.max(0, Math.round(totalScore));
-    const percentage = Math.round((finalScore / maxScore) * 100);
+    const finalMaxScore = maxScore > 0 ? maxScore : 100;
+    const percentage = Math.round((finalScore / finalMaxScore) * 100);
 
-    const submissionId = `sub-${Date.now()}`;
-    const attemptId = `att-${user?.id || 'stu'}-${Date.now().toString().slice(-4)}`;
-    const examTitle = storedExam?.title || 'Chemistry Examination';
-    const courseCode = storedExam?.courseCode || 'CHEM-302';
+    const attemptId = attemptIdRef.current;
+    const examTitle = exam?.title || 'Chemistry Examination';
+    const courseCode = exam?.courseCode || 'CHEM-101';
+
+    // Submit attempt directly to REST backend
+    try {
+      await fetch(`/api/attempts/${attemptId}/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          endTime: new Date().toISOString(),
+          answers,
+        }),
+      });
+    } catch (apiErr) {
+      console.warn('REST submit fallback:', apiErr);
+    }
 
     const resultObj = {
-      id: submissionId,
+      id: `res-${attemptId}`,
       examId: activeExamId,
       examTitle,
       courseCode,
       studentId: user?.id || 'stu-001',
-      studentName: user?.full_name || 'Candidate',
+      studentName: user?.full_name || 'Student Candidate',
       score: finalScore,
-      totalMarks: maxScore,
+      totalMarks: finalMaxScore,
       percentage,
-      grade: percentage >= 90 ? 'A+' : percentage >= 80 ? 'A' : percentage >= 70 ? 'B' : 'C',
-      passed: percentage >= 50,
+      status: percentage >= (exam?.passingMarks || 40) ? 'passed' : 'failed',
       submittedAt: new Date().toISOString(),
-      totalTimeSpentSeconds: 3600 - remainingSeconds,
-      questionsCorrect: correctCount,
-      questionsIncorrect: incorrectCount,
-      questionsUnattempted: unattemptedCount,
-      integrityScore: Math.max(40, 100 - proctoring.proctoringState.strikeCount * 20),
-      proctoringFlagsCount: proctoring.events.length,
-      domainBreakdown: [
-        { domain: 'Organic Chemistry' as const, score: 32, total: 35, percentage: 91.4 },
-        { domain: 'Physical Chemistry' as const, score: 22, total: 25, percentage: 88.0 },
-      ],
-      questionResults: [],
+      correctCount,
+      incorrectCount,
+      unattemptedCount,
     };
 
-    // Save Real Exam Attempt
     const realAttempt: ExamAttempt = {
       id: attemptId,
       examId: activeExamId,
       examTitle,
       courseCode,
-      className: storedExam?.className || 'Chemistry Class',
-      sectionId: storedExam?.sectionId,
-      sectionName: storedExam?.sectionName,
       studentId: user?.id || 'stu-001',
-      studentName: user?.full_name || 'Student',
+      studentName: user?.full_name || 'Student Candidate',
       studentEmail: user?.email || '',
       status: 'submitted',
       roomScanCompleted: true,
       startedAt: new Date(Date.now() - (3600 - remainingSeconds) * 1000).toISOString(),
       submittedAt: new Date().toISOString(),
       score: finalScore,
-      totalMarks: maxScore,
-      integrityScore: Math.max(40, 100 - proctoring.proctoringState.strikeCount * 20),
-      riskLevel: proctoring.proctoringState.strikeCount > 1 ? 'HIGH' : proctoring.proctoringState.strikeCount === 1 ? 'MEDIUM' : 'LOW',
+      totalMarks: finalMaxScore,
+      integrityScore: Math.max(10, 100 - proctoring.events.length * 15),
+      riskLevel: proctoring.events.length > 2 ? 'HIGH' : proctoring.events.length > 0 ? 'MEDIUM' : 'LOW',
       totalViolations: proctoring.events.length,
-      evidenceCount: proctoring.events.length + 1,
+      evidenceCount: 1,
       durationMinutes: Math.max(1, Math.ceil((3600 - remainingSeconds) / 60)),
       createdAt: new Date().toISOString(),
     };
@@ -385,14 +515,14 @@ export const ExamPlayerPage: React.FC = () => {
             id: `act-1`,
             timestamp: new Date().toLocaleTimeString(),
             action: 'Room Scan',
-            detail: '360° rotational scan verified',
+            detail: '360° complete panoramic scan verified',
             category: 'proctoring',
           },
           {
             id: `act-2`,
             timestamp: new Date().toLocaleTimeString(),
             action: 'Exam Submitted',
-            detail: `Score: ${finalScore}/${maxScore}`,
+            detail: `Score: ${finalScore}/${finalMaxScore}`,
             category: 'auth',
           },
         ],
@@ -406,79 +536,122 @@ export const ExamPlayerPage: React.FC = () => {
     setCurrentStep('submitted');
   };
 
-  const currentQuestion = questions[currentIndex] || questions[0];
-  const currentAnswer = answers[currentQuestion.id] || {
-    questionId: currentQuestion.id,
-    selectedOptionIds: [],
-    numericalAnswer: '',
-    mechanismText: '',
-    isMarkedForReview: false,
-    timeSpentSeconds: 0,
-    isVisited: true,
-  };
+  // Safe question getters
+  const currentQuestion: ExamQuestion | null =
+    questions.length > 0 && currentIndex < questions.length
+      ? questions[currentIndex]
+      : questions.length > 0
+      ? questions[0]
+      : null;
+
+  const currentAnswer: StudentAnswerState =
+    currentQuestion && answers[currentQuestion.id]
+      ? answers[currentQuestion.id]
+      : {
+          questionId: currentQuestion?.id || 'q-default',
+          selectedOptionIds: [],
+          numericalAnswer: '',
+          mechanismText: '',
+          isMarkedForReview: false,
+          timeSpentSeconds: 0,
+          isVisited: true,
+        };
 
   // Real-Time Autosave on Every Selection
   const handleSelectOption = (optionId: string) => {
-    setAnswers((prev) => ({
-      ...prev,
-      [currentQuestion.id]: {
-        ...prev[currentQuestion.id],
-        selectedOptionIds: [optionId],
-      },
-    }));
+    if (!currentQuestion) return;
+    const qId = currentQuestion.id;
+    setAnswers((prev) => {
+      const next = {
+        ...prev,
+        [qId]: {
+          ...(prev[qId] || { questionId: qId, timeSpentSeconds: 0, isVisited: true }),
+          selectedOptionIds: [optionId],
+        },
+      };
+
+      // Persist to backend
+      fetch(`/api/attempts/${attemptIdRef.current}/answers`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answers: { [qId]: optionId } }),
+      }).catch(() => {});
+
+      return next;
+    });
   };
 
   const handleSelectMsqOption = (optionId: string) => {
-    const currentSelected = answers[currentQuestion.id]?.selectedOptionIds || [];
+    if (!currentQuestion) return;
+    const qId = currentQuestion.id;
+    const currentSelected = answers[qId]?.selectedOptionIds || [];
     const isAlready = currentSelected.includes(optionId);
     const updated = isAlready
       ? currentSelected.filter((id) => id !== optionId)
       : [...currentSelected, optionId];
 
-    setAnswers((prev) => ({
-      ...prev,
-      [currentQuestion.id]: {
-        ...prev[currentQuestion.id],
-        selectedOptionIds: updated,
-      },
-    }));
+    setAnswers((prev) => {
+      const next = {
+        ...prev,
+        [qId]: {
+          ...(prev[qId] || { questionId: qId, timeSpentSeconds: 0, isVisited: true }),
+          selectedOptionIds: updated,
+        },
+      };
+
+      fetch(`/api/attempts/${attemptIdRef.current}/answers`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answers: { [qId]: updated } }),
+      }).catch(() => {});
+
+      return next;
+    });
   };
 
   const handleUpdateNumerical = (val: string) => {
+    if (!currentQuestion) return;
+    const qId = currentQuestion.id;
     setAnswers((prev) => ({
       ...prev,
-      [currentQuestion.id]: {
-        ...prev[currentQuestion.id],
+      [qId]: {
+        ...(prev[qId] || { questionId: qId, timeSpentSeconds: 0, isVisited: true }),
         numericalAnswer: val,
       },
     }));
   };
 
   const handleUpdateMechanism = (text: string) => {
+    if (!currentQuestion) return;
+    const qId = currentQuestion.id;
     setAnswers((prev) => ({
       ...prev,
-      [currentQuestion.id]: {
-        ...prev[currentQuestion.id],
+      [qId]: {
+        ...(prev[qId] || { questionId: qId, timeSpentSeconds: 0, isVisited: true }),
         mechanismText: text,
       },
     }));
   };
 
   const handleToggleMarkForReview = () => {
+    if (!currentQuestion) return;
+    const qId = currentQuestion.id;
     setAnswers((prev) => ({
       ...prev,
-      [currentQuestion.id]: {
-        ...prev[currentQuestion.id],
-        isMarkedForReview: !prev[currentQuestion.id]?.isMarkedForReview,
+      [qId]: {
+        ...(prev[qId] || { questionId: qId, timeSpentSeconds: 0, isVisited: true }),
+        isMarkedForReview: !prev[qId]?.isMarkedForReview,
       },
     }));
   };
 
   const handleClearResponse = () => {
+    if (!currentQuestion) return;
+    const qId = currentQuestion.id;
     setAnswers((prev) => ({
       ...prev,
-      [currentQuestion.id]: {
-        ...prev[currentQuestion.id],
+      [qId]: {
+        ...(prev[qId] || { questionId: qId, timeSpentSeconds: 0, isVisited: true }),
         selectedOptionIds: [],
         numericalAnswer: '',
         mechanismText: '',
@@ -487,15 +660,17 @@ export const ExamPlayerPage: React.FC = () => {
   };
 
   const handleJumpQuestion = (index: number) => {
-    const targetQ = questions[index];
-    setAnswers((prev) => ({
-      ...prev,
-      [targetQ.id]: {
-        ...prev[targetQ.id],
-        isVisited: true,
-      },
-    }));
-    setCurrentIndex(index);
+    if (index >= 0 && index < questions.length) {
+      const targetQ = questions[index];
+      setAnswers((prev) => ({
+        ...prev,
+        [targetQ.id]: {
+          ...(prev[targetQ.id] || { questionId: targetQ.id, timeSpentSeconds: 0 }),
+          isVisited: true,
+        },
+      }));
+      setCurrentIndex(index);
+    }
   };
 
   const answeredCount = Object.values(answers).filter(
@@ -507,6 +682,64 @@ export const ExamPlayerPage: React.FC = () => {
 
   const markedCount = Object.values(answers).filter((a) => a.isMarkedForReview).length;
 
+  // -------------------------------------------------------------
+  // LOADING STATE (Guarantees zero blank white screen)
+  // -------------------------------------------------------------
+  if (isLoadingExam) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="text-center space-y-4 max-w-sm mx-auto">
+          <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center mx-auto shadow-sm animate-pulse">
+            <Loader2 className="w-7 h-7 animate-spin" />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-lg font-bold text-slate-900">Loading Examination</h2>
+            <p className="text-xs text-slate-500">
+              Retrieving question bank and proctoring parameters from database...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // -------------------------------------------------------------
+  // ERROR STATE (Guarantees zero blank white screen)
+  // -------------------------------------------------------------
+  if (examLoadError || !exam) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-card p-6 sm:p-8 text-center space-y-5">
+          <div className="w-14 h-14 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto shadow-sm">
+            <AlertTriangle className="w-7 h-7" />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-lg font-bold text-slate-900">Examination Unavailable</h2>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              {examLoadError || 'The requested exam could not be loaded.'}
+            </p>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="primary"
+              size="md"
+              className="flex-1 text-xs font-bold"
+              leftIcon={<RefreshCw className="w-4 h-4" />}
+              onClick={() => loadExam()}
+            >
+              Retry
+            </Button>
+            <Link to="/student/exams" className="flex-1">
+              <Button variant="secondary" size="md" className="w-full text-xs" leftIcon={<Home className="w-4 h-4" />}>
+                My Exams
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // =========================================================
   // STEP 1 — INSTRUCTIONS
   // =========================================================
@@ -516,13 +749,13 @@ export const ExamPlayerPage: React.FC = () => {
         <div className="w-full max-w-2xl rounded-2xl bg-white border border-slate-200 shadow-card p-6 sm:p-8 space-y-6">
           <div className="space-y-2 border-b border-slate-100 pb-4">
             <span className="text-xs font-mono font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded border border-blue-200">
-              CHEM-302 • Unit Examination
+              {exam.courseCode || 'CHEM-101'} • {exam.className || 'Chemistry Course'}
             </span>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
-              Organic Chemistry — Unit Test
+              {exam.title}
             </h1>
             <p className="text-xs text-slate-500">
-              Please review all examination rules and proctoring requirements before proceeding.
+              Instructor: <strong className="text-slate-700">{exam.teacherName}</strong> • Please review all examination rules and proctoring requirements before proceeding.
             </p>
           </div>
 
@@ -530,7 +763,7 @@ export const ExamPlayerPage: React.FC = () => {
             <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
               <span className="text-slate-500 font-medium block">Allotted Duration</span>
               <span className="text-sm font-bold text-slate-900 flex items-center gap-1 font-mono">
-                <Clock className="w-4 h-4 text-blue-600" /> 60 Minutes
+                <Clock className="w-4 h-4 text-blue-600" /> {exam.durationMinutes || 60} Minutes
               </span>
             </div>
             <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
@@ -541,44 +774,38 @@ export const ExamPlayerPage: React.FC = () => {
             </div>
             <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
               <span className="text-slate-500 font-medium block">Perimeter Gate</span>
-              <span className="text-sm font-bold text-rose-700 flex items-center gap-1">
-                <ShieldAlert className="w-4 h-4 text-rose-600" /> 300° Min Scan
+              <span className="text-sm font-bold text-emerald-700 flex items-center gap-1">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" /> 360° Complete Scan
               </span>
             </div>
           </div>
 
           {/* Rules List */}
-          <div className="space-y-2 text-xs">
-            <h3 className="font-bold text-slate-900">Mandatory Examination & Proctoring Rules:</h3>
-            <ul className="space-y-2 text-slate-600">
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                <span><strong>No Tab Switching:</strong> Switching tabs or navigating away immediately submits & locks your exam.</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                <span><strong>Camera & Microphone Required:</strong> Must remain active and unblocked throughout the test.</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                <span><strong>300° Minimum Room Scan:</strong> You must record a complete rotational scan of your examination environment before entry.</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                <span><strong>Strict 15-Second Timeout Policy:</strong> If face or camera are lost for 15 continuous seconds, the exam terminates.</span>
-              </li>
+          <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-100 space-y-2 text-xs text-blue-950">
+            <span className="font-bold block uppercase tracking-wider text-[11px] text-blue-800">
+              Automated Integrity Protocol:
+            </span>
+            <ul className="space-y-1.5 list-disc pl-4 text-slate-700">
+              <li>Continuous live camera and audio recording active during entire assessment.</li>
+              <li>A full 360° panoramic room scan must be completed before entering the exam.</li>
+              <li>Tab switching or exiting fullscreen will immediately trigger security warning strikes.</li>
+              <li>Calculators and formula reference tools are provided directly in the interface.</li>
             </ul>
           </div>
 
-          <div className="pt-2">
+          <div className="flex items-center justify-between pt-2">
+            <Link to="/student/exams">
+              <Button variant="secondary" size="md">
+                Cancel
+              </Button>
+            </Link>
             <Button
               variant="primary"
               size="lg"
-              className="w-full font-bold text-sm"
               rightIcon={<ArrowRight className="w-4 h-4" />}
               onClick={() => setCurrentStep('hardware_check')}
             >
-              Continue to Proctoring Check
+              Verify Hardware & Proceed
             </Button>
           </div>
         </div>
@@ -587,170 +814,55 @@ export const ExamPlayerPage: React.FC = () => {
   }
 
   // =========================================================
-  // STEP 2 — WEBCAM + MICROPHONE TEST (PROCTORING CHECK)
+  // STEP 2 — HARDWARE VERIFICATION
   // =========================================================
   if (currentStep === 'hardware_check') {
     return (
       <ProctoringCheckScreen
         activeMediaStream={proctoring.activeMediaStream}
-        onInitializeMedia={proctoring.startContinuousProctoringMedia}
+        onInitializeMedia={() => proctoring.startContinuousProctoringMedia()}
         onContinueToRoomScan={() => setCurrentStep('room_scan')}
       />
     );
   }
 
   // =========================================================
-  // STEP 3 & 4 — 360° ROOM SCAN & CONFIRMATION (300° MINIMUM)
+  // STEP 3 — 360° ROOM SCAN
   // =========================================================
   if (currentStep === 'room_scan') {
     return (
       <RoomScanExperience
         activeMediaStream={proctoring.activeMediaStream}
-        onInitializeMedia={proctoring.startContinuousProctoringMedia}
+        onInitializeMedia={() => proctoring.startContinuousProctoringMedia()}
         onCompleteAndStartExam={handleCompleteScanAndStartExam}
       />
     );
   }
 
   // =========================================================
-  // STEP 6A — TAB SWITCH TERMINATED & LOCKED (WITH TEACHER RESTART APPROVAL)
+  // STEP 4 — TERMINATION SCREENS (LOCK & PROCTORING STRIKES)
   // =========================================================
-  if (currentStep === 'terminated_tab_switch') {
+  if (currentStep === 'terminated_proctoring' || currentStep === 'terminated_tab_switch') {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 py-12 selection:bg-rose-500 selection:text-white">
-        <div className="w-full max-w-xl rounded-2xl bg-white border border-rose-200 shadow-2xl p-6 sm:p-8 text-center space-y-6">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 py-12">
+        <div className="w-full max-w-lg rounded-2xl bg-white border border-slate-200 shadow-card p-6 sm:p-8 text-center space-y-6">
           <div className="w-16 h-16 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto shadow-sm">
-            <Lock className="w-8 h-8" />
+            <ShieldAlert className="w-8 h-8" />
           </div>
 
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-rose-100 text-rose-800 text-xs font-black uppercase tracking-wider">
-              <ShieldAlert className="w-3.5 h-3.5" />
-              <span>TAB SWITCH DETECTED — EXAM LOCKED</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              EXAMINATION TERMINATED & SUBMITTED
+          <div className="space-y-1">
+            <h1 className="text-2xl font-extrabold text-slate-900">
+              Examination Interrupted
             </h1>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-md mx-auto">
-              You navigated away from the examination window. Your answers were auto-saved and the attempt was automatically terminated.
-            </p>
-          </div>
-
-          {/* Reason Card */}
-          <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-left space-y-1.5">
-            <span className="text-[11px] font-bold text-rose-700 uppercase tracking-wider block">
-              Integrity Violation:
-            </span>
-            <p className="text-xs font-extrabold text-rose-950">
-              Tab Switch / Window Inactive during active examination.
-            </p>
-          </div>
-
-          {/* Attempt Info */}
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 grid grid-cols-2 gap-3 text-xs text-left">
-            <div>
-              <span className="text-slate-400 block text-[11px]">Attempt ID:</span>
-              <strong className="text-slate-800 font-mono">{terminationInfo?.attemptId || 'att-001'}</strong>
-            </div>
-            <div>
-              <span className="text-slate-400 block text-[11px]">Terminated At:</span>
-              <strong className="text-slate-800 font-mono">{terminationInfo?.terminatedAt || 'Just now'}</strong>
-            </div>
-          </div>
-
-          {/* Teacher Permission Status Box */}
-          <div className="p-4 rounded-xl border transition-all text-xs space-y-2">
-            {restartStatus === 'granted' ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-center gap-2 text-emerald-700 font-extrabold text-sm">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                  <span>Restart Permission Granted by Teacher!</span>
-                </div>
-                <p className="text-slate-600 text-xs">
-                  Your instructor has approved your request to restart the examination.
-                </p>
-                <Button
-                  variant="primary"
-                  size="md"
-                  className="w-full font-bold text-xs"
-                  leftIcon={<RotateCcw className="w-4 h-4" />}
-                  onClick={handleStartFreshExam}
-                >
-                  START EXAM AGAIN
-                </Button>
-              </div>
-            ) : restartStatus === 'pending' ? (
-              <div className="space-y-2 text-amber-800 bg-amber-50/50 p-3 rounded-lg border border-amber-200">
-                <div className="flex items-center justify-center gap-2 font-bold">
-                  <Loader2 className="w-4 h-4 text-amber-600 animate-spin" />
-                  <span>Restart Request Sent to Instructor</span>
-                </div>
-                <p className="text-[11px] text-amber-700">
-                  Waiting for instructor to review evidence and grant restart permission...
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3 text-left">
-                <p className="text-slate-600 text-xs">
-                  To restart this examination, submit an appeal/request to your instructor with a brief explanation:
-                </p>
-                <textarea
-                  rows={2}
-                  placeholder="Explain why you switched tabs or need a restart (optional)..."
-                  value={studentNote}
-                  onChange={(e) => setStudentNote(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-rose-500/20 resize-none"
-                />
-                <Button
-                  variant="danger"
-                  size="md"
-                  className="w-full font-bold text-xs"
-                  leftIcon={<Send className="w-4 h-4" />}
-                  onClick={handleRequestRestartFromTeacher}
-                  isLoading={isRequestingRestart}
-                >
-                  SEND RESTART REQUEST TO TEACHER
-                </Button>
-              </div>
-            )}
-          </div>
-
-          <div className="pt-1">
-            <Link to="/student/dashboard" className="block">
-              <Button variant="secondary" size="sm" className="w-full text-xs font-semibold">
-                Return to Student Dashboard
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // =========================================================
-  // STEP 6B — EXAMINATION TERMINATED SCREEN (15-SECOND TIMEOUT)
-  // =========================================================
-  if (currentStep === 'terminated_proctoring') {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 py-12 selection:bg-rose-500 selection:text-white">
-        <div className="w-full max-w-xl rounded-2xl bg-white border border-rose-200 shadow-xl p-6 sm:p-8 text-center space-y-6">
-          <div className="w-16 h-16 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto shadow-sm">
-            <XCircle className="w-8 h-8" />
-          </div>
-
-          <div className="space-y-2">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-              EXAMINATION TERMINATED
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-md mx-auto">
-              Your examination has been terminated because a required proctoring condition was not restored within the allowed 15 seconds.
+            <p className="text-xs text-slate-500">
+              The automated proctoring monitor detected an integrity event and locked your session.
             </p>
           </div>
 
           {/* Reason Box */}
           <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-left space-y-1.5">
             <span className="text-[11px] font-bold text-rose-700 uppercase tracking-wider block">
-              Termination Reason:
+              Interruption Reason:
             </span>
             <p className="text-sm font-extrabold text-rose-950">
               {terminationInfo?.reason || 'Face Not Detected for 15 continuous seconds.'}
@@ -761,29 +873,29 @@ export const ExamPlayerPage: React.FC = () => {
           <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 grid grid-cols-2 gap-3 text-xs text-left">
             <div>
               <span className="text-slate-400 block text-[11px]">Examination:</span>
-              <strong className="text-slate-800 block truncate">Organic Chemistry — Unit Test</strong>
+              <strong className="text-slate-800 block truncate">{exam.title}</strong>
             </div>
             <div>
               <span className="text-slate-400 block text-[11px]">Student Name:</span>
-              <strong className="text-slate-800 block truncate">{user?.full_name || 'Alex Chen'}</strong>
+              <strong className="text-slate-800 block truncate">{user?.full_name || 'Student Candidate'}</strong>
             </div>
             <div>
               <span className="text-slate-400 block text-[11px]">Attempt ID:</span>
-              <strong className="text-slate-800 font-mono">{terminationInfo?.attemptId || 'att-001'}</strong>
+              <strong className="text-slate-800 font-mono">{terminationInfo?.attemptId || attemptIdRef.current}</strong>
             </div>
             <div>
-              <span className="text-slate-400 block text-[11px]">Termination Time:</span>
+              <span className="text-slate-400 block text-[11px]">Interruption Time:</span>
               <strong className="text-slate-800 font-mono">{terminationInfo?.terminatedAt || 'Just now'}</strong>
             </div>
           </div>
 
-          {/* Restart Request Box */}
+          {/* Restart / Re-entry Request Box */}
           <div className="p-4 rounded-xl border transition-all text-xs space-y-2">
             {restartStatus === 'granted' ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-center gap-2 text-emerald-700 font-extrabold text-sm">
                   <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                  <span>Restart Permission Granted by Teacher!</span>
+                  <span>Restart Permission Granted by Instructor!</span>
                 </div>
                 <Button
                   variant="primary"
@@ -792,32 +904,41 @@ export const ExamPlayerPage: React.FC = () => {
                   leftIcon={<RotateCcw className="w-4 h-4" />}
                   onClick={handleStartFreshExam}
                 >
-                  START EXAM AGAIN
+                  RESUME EXAMINATION
                 </Button>
               </div>
             ) : restartStatus === 'pending' ? (
               <div className="flex items-center justify-center gap-2 font-bold text-amber-800 bg-amber-50 p-2.5 rounded-lg border border-amber-200">
                 <Loader2 className="w-4 h-4 text-amber-600 animate-spin" />
-                <span>Restart Request Sent to Instructor...</span>
+                <span>Re-entry Request Sent. Awaiting Instructor Approval...</span>
               </div>
             ) : (
-              <Button
-                variant="danger"
-                size="md"
-                className="w-full font-bold text-xs"
-                leftIcon={<Send className="w-4 h-4" />}
-                onClick={handleRequestRestartFromTeacher}
-                isLoading={isRequestingRestart}
-              >
-                REQUEST RESTART PERMISSION FROM TEACHER
-              </Button>
+              <div className="space-y-2">
+                <textarea
+                  value={studentNote}
+                  onChange={(e) => setStudentNote(e.target.value)}
+                  placeholder="Optional: Explain why the interruption occurred (e.g. accidental browser exit)..."
+                  rows={2}
+                  className="w-full p-2.5 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+                <Button
+                  variant="danger"
+                  size="md"
+                  className="w-full font-bold text-xs"
+                  leftIcon={<Send className="w-4 h-4" />}
+                  onClick={handleRequestRestartFromTeacher}
+                  isLoading={isRequestingRestart}
+                >
+                  REQUEST RE-ENTRY PERMISSION FROM INSTRUCTOR
+                </Button>
+              </div>
             )}
           </div>
 
           <div className="pt-1">
-            <Link to="/student/dashboard" className="block">
+            <Link to="/student/exams" className="block">
               <Button variant="secondary" size="sm" className="w-full text-xs font-semibold">
-                Return to Dashboard
+                Return to My Exams
               </Button>
             </Link>
           </div>
@@ -827,7 +948,7 @@ export const ExamPlayerPage: React.FC = () => {
   }
 
   // =========================================================
-  // STEP 5 — SUBMITTED CONFIRMATION (NORMAL SUBMISSION)
+  // STEP 5 — SUBMITTED CONFIRMATION
   // =========================================================
   if (currentStep === 'submitted') {
     return (
@@ -842,7 +963,7 @@ export const ExamPlayerPage: React.FC = () => {
               Examination Submitted
             </h1>
             <p className="text-xs text-slate-500">
-              All responses have been successfully recorded and your hardware streams have ended.
+              All responses have been securely evaluated and recorded in the database.
             </p>
           </div>
 
@@ -851,26 +972,26 @@ export const ExamPlayerPage: React.FC = () => {
             <div>
               <span className="text-slate-500 block">Exam Score:</span>
               <strong className="text-base text-slate-900 font-mono">
-                {submissionResult?.score || 16} / {submissionResult?.totalMarks || 20} ({submissionResult?.percentage || 80}%)
+                {submissionResult?.score ?? 0} / {submissionResult?.totalMarks ?? exam.totalMarks} ({submissionResult?.percentage ?? 0}%)
               </strong>
             </div>
             <div>
               <span className="text-slate-500 block">Integrity Status:</span>
               <strong className="text-base text-emerald-700 flex items-center gap-1 font-mono">
-                <ShieldCheck className="w-4 h-4 text-emerald-600" /> Verified (300°+ Scan)
+                <ShieldCheck className="w-4 h-4 text-emerald-600" /> Verified (360° Scan)
               </strong>
             </div>
           </div>
 
           <div className="flex gap-3 pt-2">
-            <Link to="/student/dashboard" className="flex-1">
+            <Link to="/student/exams" className="flex-1">
               <Button variant="secondary" size="md" className="w-full text-xs">
-                Back to Dashboard
+                Back to My Exams
               </Button>
             </Link>
             <Link to="/student/results" className="flex-1">
               <Button variant="primary" size="md" className="w-full text-xs font-bold">
-                View All Results
+                View Results Ledger
               </Button>
             </Link>
           </div>
@@ -880,14 +1001,14 @@ export const ExamPlayerPage: React.FC = () => {
   }
 
   // =========================================================
-  // STEP 4 — FULL-SCREEN EXAMINATION (STARTS AUTOMATICALLY)
+  // STEP 6 — LIVE FULL-SCREEN EXAMINATION
   // =========================================================
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col selection:bg-blue-500 selection:text-white relative">
       {/* 1. Exam Header with Timer & Submit */}
       <ExamHeader
-        examTitle="Organic Chemistry — Unit Test"
-        courseCode="CHEM-302"
+        examTitle={exam.title}
+        courseCode={exam.courseCode || 'CHEM-101'}
         remainingSeconds={remainingSeconds}
         totalQuestions={questions.length}
         answeredCount={answeredCount}
@@ -900,30 +1021,37 @@ export const ExamPlayerPage: React.FC = () => {
         onSubmitExam={handleFinalSubmit}
       />
 
-      {/* 2. Main Examination Canvas (Question + Palette) with bottom clearance for floating widget */}
+      {/* 2. Main Examination Canvas */}
       <main className="flex-1 p-4 sm:p-6 pb-36 max-w-7xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left: Active Question */}
         <div className="lg:col-span-8">
-          <QuestionCard
-            question={currentQuestion}
-            currentIndex={currentIndex}
-            totalQuestions={questions.length}
-            answerState={currentAnswer}
-            onSelectOption={handleSelectOption}
-            onSelectMsqOption={handleSelectMsqOption}
-            onUpdateNumerical={handleUpdateNumerical}
-            onUpdateMechanism={handleUpdateMechanism}
-            onToggleMarkForReview={handleToggleMarkForReview}
-            onClearResponse={handleClearResponse}
-            onPrev={() => handleJumpQuestion(Math.max(0, currentIndex - 1))}
-            onNext={() => {
-              if (currentIndex < questions.length - 1) {
-                handleJumpQuestion(currentIndex + 1);
-              }
-            }}
-            isFirst={currentIndex === 0}
-            isLast={currentIndex === questions.length - 1}
-          />
+          {currentQuestion ? (
+            <QuestionCard
+              question={currentQuestion}
+              currentIndex={currentIndex}
+              totalQuestions={questions.length}
+              answerState={currentAnswer}
+              onSelectOption={handleSelectOption}
+              onSelectMsqOption={handleSelectMsqOption}
+              onUpdateNumerical={handleUpdateNumerical}
+              onUpdateMechanism={handleUpdateMechanism}
+              onToggleMarkForReview={handleToggleMarkForReview}
+              onClearResponse={handleClearResponse}
+              onPrev={() => handleJumpQuestion(Math.max(0, currentIndex - 1))}
+              onNext={() => {
+                if (currentIndex < questions.length - 1) {
+                  handleJumpQuestion(currentIndex + 1);
+                }
+              }}
+              isFirst={currentIndex === 0}
+              isLast={currentIndex === questions.length - 1}
+            />
+          ) : (
+            <div className="p-8 rounded-2xl bg-white border border-slate-200 text-center space-y-3">
+              <FileText className="w-8 h-8 text-slate-400 mx-auto" />
+              <h3 className="font-bold text-slate-800">No questions available for this exam.</h3>
+            </div>
+          )}
         </div>
 
         {/* Right: Question Palette Grid */}
@@ -937,7 +1065,7 @@ export const ExamPlayerPage: React.FC = () => {
         </div>
       </main>
 
-      {/* 3. COMPACT FLOATING LIVE WEBCAM & UNIFIED PROCTORING CONTROLLER IN RIGHT-BOTTOM CORNER */}
+      {/* 3. Floating Live Webcam Widget in Right-Bottom Corner */}
       <ProctoringCornerWidget
         activeMediaStream={proctoring.activeMediaStream}
         proctoringState={proctoring.proctoringState}
@@ -945,11 +1073,19 @@ export const ExamPlayerPage: React.FC = () => {
         onRetryHardware={() => proctoring.startContinuousProctoringMedia()}
       />
 
-      {/* 4. ONLY CALCULATOR IN EXAM TOOLS */}
+      {/* 4. Examination Chemistry Calculator Tool */}
       <ChemistryCalculator
         isOpen={isCalculatorOpen}
         onClose={() => setIsCalculatorOpen(false)}
       />
     </div>
+  );
+};
+
+export const ExamPlayerPage: React.FC = () => {
+  return (
+    <ExamErrorBoundary fallbackTitle="Examination Screen Recovered">
+      <InnerExamPlayer />
+    </ExamErrorBoundary>
   );
 };

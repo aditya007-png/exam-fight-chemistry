@@ -1,7 +1,5 @@
-// src/pages/student/StudentDashboard.tsx
-// Real Student Dashboard with dynamic real exam data and attempts calculation
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { getExamsForStudent, getAttemptsForStudent, fetchExamsFromDB, fetchAttemptsFromDB } from '../../lib/examService';
 import { getStudentEnrolledSectionIds, getStudentEnrolledClasses, fetchEnrollmentsFromDB } from '../../lib/classService';
@@ -21,6 +19,7 @@ import {
 
 export const StudentDashboard: React.FC = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const [exams, setExams] = useState<ExamItem[]>([]);
   const [attempts, setAttempts] = useState<ExamAttempt[]>([]);
   const [enrolledClassesCount, setEnrolledClassesCount] = useState<number>(0);
@@ -28,9 +27,11 @@ export const StudentDashboard: React.FC = () => {
   useEffect(() => {
     const loadDashboard = async () => {
       if (user?.id || user?.email) {
-        await fetchEnrollmentsFromDB(user?.id);
-        await fetchExamsFromDB();
-        await fetchAttemptsFromDB();
+        await Promise.all([
+          fetchEnrollmentsFromDB(user?.id),
+          fetchExamsFromDB(user ? { studentId: user.id, studentEmail: user.email } : undefined),
+          fetchAttemptsFromDB(),
+        ]);
 
         const secIds = getStudentEnrolledSectionIds(user?.id || '', user?.email || '');
         const studentExams = getExamsForStudent(secIds);
@@ -44,7 +45,7 @@ export const StudentDashboard: React.FC = () => {
     };
 
     loadDashboard();
-  }, [user?.id, user?.email]);
+  }, [user?.id, user?.email, location.key]);
 
   const completedAttempts = attempts.filter((a) => a.status === 'submitted');
   const avgIntegrity =
